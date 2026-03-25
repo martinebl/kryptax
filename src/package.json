@@ -19,6 +19,8 @@
     "vite": "^8.0.1"
   },
   "dependencies": {
-    "bignumber.js": "^10.0.2"
+    "@tailwindcss/vite": "^4.2.2",
+    "bignumber.js": "^10.0.2",
+    "tailwindcss": "^4.2.2"
   }
 }
