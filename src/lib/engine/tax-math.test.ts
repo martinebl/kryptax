@@ -7,8 +7,8 @@ import dkRules from '$lib/rules/dk-2024.json';
 
 const bn = (n: number) => new BigNumber(n);
 const rules = dkRules as TaxRules;
-const kapital = rules.incomeTypes[0]; // Kapitalindkomst
-const personal = rules.incomeTypes[1]; // Personlig indkomst (B-indkomst)
+const kapital = rules.incomeTypes[0]; // Personlig indkomst (spekulation)
+const personal = rules.incomeTypes[1]; // Personlig indkomst (erhverv)
 
 describe('applyBrackets', () => {
   const brackets: TaxBracket[] = [
@@ -92,9 +92,9 @@ describe('computeDisposalTax', () => {
 
     it('applies effectiveRate when net is negative', () => {
       // 0 gains - 40000 losses = -40000 net
-      // deductible at effectiveRate 0.33 → -13200
+      // deductible at effectiveRate 0.26 → -10400
       const result = computeDisposalTax(kapital, bn(0), bn(40000));
-      expect(result.tax.toNumber()).toBe(-13200);
+      expect(result.tax.toNumber()).toBe(-10400);
       expect(result.carryForward.toNumber()).toBe(0);
     });
 
@@ -121,10 +121,10 @@ describe('computeDisposalTax', () => {
 
     it('taxes gains at brackets and losses at effectiveRate separately', () => {
       // Gains: 50000 → bracket tax: 49700 at 0%, 300 at 37% = 111
-      // Losses: 20000 → credit: 20000 * 0.33 = 6600
-      // Net tax: 111 - 6600 = -6489
+      // Losses: 20000 → credit: 20000 * 0.26 = 5200
+      // Net tax: 111 - 5200 = -5089
       const result = computeDisposalTax(noOffset, bn(50000), bn(20000));
-      expect(result.tax.toNumber()).toBe(-6489);
+      expect(result.tax.toNumber()).toBe(-5089);
     });
 
     it('carries forward losses when carryForward is true and not deductible', () => {
