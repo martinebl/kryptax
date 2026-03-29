@@ -1,6 +1,7 @@
 <script lang="ts">
-  import type { Transaction, IExchangeImporter, IImportPreprocessor } from '$lib/types';
+  import type { Transaction, IExchangeImporter } from '$lib/types';
   import { LedgerImporter } from '$lib/importers/ledger';
+  import PreprocessorReview from '$lib/components/PreprocessorReview.svelte';
 
   interface Props {
     onImport: (transactions: Transaction[]) => void;
@@ -19,10 +20,8 @@
   let error = $state('');
   let parsedCount = $state(0);
 
-  // Review step state
   let rawTransactions = $state<Transaction[]>([]);
   let reviewing = $state(false);
-  let selectedTxIds = $state<Map<string, Set<string>>>(new Map());
 
   const selectImporter = (name: string) => {
     const found = importers.find((i) => i.exchangeName === name);
@@ -37,48 +36,12 @@
     const next = new Set(enabledPreprocessors);
     next.has(id) ? next.delete(id) : next.add(id);
     enabledPreprocessors = next;
-
-    if (reviewing) {
-      updateSelections();
-    }
   };
 
   const resetReview = () => {
     rawTransactions = [];
     reviewing = false;
-    selectedTxIds = new Map();
   };
-
-  const updateSelections = () => {
-    const next = new Map<string, Set<string>>();
-    for (const p of selectedImporter.preprocessors) {
-      if (!enabledPreprocessors.has(p.id)) continue;
-      const existing = selectedTxIds.get(p.id);
-      if (existing) {
-        next.set(p.id, existing);
-      } else {
-        const eligible = rawTransactions.filter((tx) => p.isEligible(tx)).map((tx) => tx.id);
-        next.set(p.id, new Set(eligible));
-      }
-    }
-    selectedTxIds = next;
-  };
-
-  const toggleTxForPreprocessor = (preprocessorId: string, txId: string) => {
-    const current = selectedTxIds.get(preprocessorId);
-    if (!current) return;
-    const next = new Set(current);
-    next.has(txId) ? next.delete(txId) : next.add(txId);
-    selectedTxIds = new Map(selectedTxIds).set(preprocessorId, next);
-  };
-
-  const eligibleTransactions = (preprocessor: IImportPreprocessor): Transaction[] =>
-    rawTransactions.filter((tx) => preprocessor.isEligible(tx));
-
-  const applyPreprocessors = (transactions: Transaction[]): Transaction[] =>
-    selectedImporter.preprocessors
-      .filter((p) => enabledPreprocessors.has(p.id))
-      .reduce((txs, p) => p.apply(txs, selectedTxIds.get(p.id)), transactions);
 
   const handleDrop = (e: DragEvent) => {
     e.preventDefault();
@@ -109,10 +72,9 @@
       error = '';
 
       if (hasEligibleTransactions()) {
-        updateSelections();
         reviewing = true;
       } else {
-        finishImport();
+        handleConfirm(new Map());
       }
     } catch (e) {
       error = e instanceof Error ? e.message : 'Failed to parse CSV';
@@ -120,18 +82,13 @@
     }
   };
 
-  const finishImport = () => {
-    const transactions = applyPreprocessors(rawTransactions);
+  const handleConfirm = (selectedTxIds: Map<string, Set<string>>) => {
+    const transactions = selectedImporter.preprocessors
+      .filter((p) => enabledPreprocessors.has(p.id))
+      .reduce((txs, p) => p.apply(txs, selectedTxIds.get(p.id)), rawTransactions);
     parsedCount = transactions.length;
     reviewing = false;
     onImport(transactions);
-  };
-
-  const formatTxSummary = (tx: Transaction): string => {
-    const asset = tx.toAsset ?? tx.fromAsset ?? tx.feeAsset ?? '?';
-    const amount = tx.toAmount ?? tx.fromAmount ?? tx.feeAmount;
-    const amountStr = amount ? amount.toFixed(6).replace(/\.?0+$/, '') : '?';
-    return `${amountStr} ${asset}`;
   };
 </script>
 
@@ -231,89 +188,14 @@
 
   <!-- Review step -->
   {#if reviewing}
-    <div class="mx-auto max-w-2xl">
-      <div class="mb-4 rounded-lg border border-border bg-bg-card p-4">
-        <p class="text-sm text-text-heading">
-          Parsed <span class="font-medium">{rawTransactions.length}</span> transactions from
-          <span class="font-medium">{files?.[0]?.name}</span>
-        </p>
-      </div>
-
-      {#each selectedImporter.preprocessors.filter((p) => enabledPreprocessors.has(p.id)) as preprocessor}
-        {@const eligible = eligibleTransactions(preprocessor)}
-        {@const selected = selectedTxIds.get(preprocessor.id) ?? new Set()}
-        {#if eligible.length > 0}
-          <div class="mb-6 rounded-lg border border-border bg-bg-card p-4">
-            <div class="mb-3 flex items-center justify-between">
-              <div>
-                <p class="text-sm font-medium text-text-heading">{preprocessor.label}</p>
-                <p class="text-xs text-text">
-                  {selected.size} of {eligible.length} eligible transactions selected
-                </p>
-              </div>
-              <div class="flex gap-2">
-                <button
-                  class="rounded px-2 py-1 text-xs text-accent hover:bg-accent/10"
-                  onclick={() => {
-                    selectedTxIds = new Map(selectedTxIds).set(
-                      preprocessor.id,
-                      new Set(eligible.map((tx) => tx.id)),
-                    );
-                  }}
-                >
-                  Select all
-                </button>
-                <button
-                  class="rounded px-2 py-1 text-xs text-accent hover:bg-accent/10"
-                  onclick={() => {
-                    selectedTxIds = new Map(selectedTxIds).set(preprocessor.id, new Set());
-                  }}
-                >
-                  Deselect all
-                </button>
-              </div>
-            </div>
-
-            <div class="max-h-64 space-y-1 overflow-y-auto">
-              {#each eligible as tx}
-                <label class="flex cursor-pointer items-center gap-3 rounded-md px-2 py-1.5 hover:bg-bg-card/80">
-                  <input
-                    type="checkbox"
-                    checked={selected.has(tx.id)}
-                    onchange={() => toggleTxForPreprocessor(preprocessor.id, tx.id)}
-                    class="accent-accent"
-                  />
-                  <div class="flex flex-1 items-center justify-between text-xs">
-                    <span class="font-medium text-text-heading">{formatTxSummary(tx)}</span>
-                    <span class="text-text">{tx.date.toISOString().slice(0, 10)}</span>
-                  </div>
-                  {#if tx.fiatCurrency && tx.fiatValue.gt(0)}
-                    <span class="text-xs text-text">
-                      {tx.fiatValue.toFixed(2)} {tx.fiatCurrency}
-                    </span>
-                  {/if}
-                </label>
-              {/each}
-            </div>
-          </div>
-        {/if}
-      {/each}
-
-      <div class="flex justify-end gap-3">
-        <button
-          class="rounded-lg border border-border px-4 py-2 text-sm font-medium text-text-heading transition-colors hover:bg-bg-card"
-          onclick={resetReview}
-        >
-          Back
-        </button>
-        <button
-          class="rounded-lg bg-accent px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-accent/90"
-          onclick={finishImport}
-        >
-          Confirm import
-        </button>
-      </div>
-    </div>
+    <PreprocessorReview
+      {rawTransactions}
+      preprocessors={selectedImporter.preprocessors}
+      {enabledPreprocessors}
+      fileName={files?.[0]?.name ?? ''}
+      onConfirm={handleConfirm}
+      onBack={resetReview}
+    />
   {/if}
 
   <!-- Error message -->
