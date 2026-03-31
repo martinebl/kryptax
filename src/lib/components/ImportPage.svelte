@@ -26,6 +26,9 @@
 
   let rawTransactions = $state<Transaction[]>([]);
   let reviewing = $state(false);
+  let enriching = $state(false);
+  let enrichProgress = $state(0);
+  let enrichTotal = $state(0);
 
   const selectImporter = (name: string) => {
     const found = importers.find((i) => i.exchangeName === name);
@@ -92,9 +95,19 @@
     const preprocessed = selectedImporter.preprocessors
       .filter((p) => enabledPreprocessors.has(p.id))
       .reduce((txs, p) => p.apply(txs, selectedTxIds.get(p.id)), rawTransactions);
-    const transactions = await enrichFiatValues(preprocessed, converter, 'DKK');
-    parsedCount = transactions.length;
+
     reviewing = false;
+    enriching = true;
+    enrichProgress = 0;
+    enrichTotal = preprocessed.length;
+
+    const transactions = await enrichFiatValues(preprocessed, converter, 'DKK', (completed, total) => {
+      enrichProgress = completed;
+      enrichTotal = total;
+    });
+
+    enriching = false;
+    parsedCount = transactions.length;
     onImport(transactions);
   };
 </script>
@@ -203,6 +216,22 @@
       onConfirm={handleConfirm}
       onBack={resetReview}
     />
+  {/if}
+
+  <!-- Enrichment progress -->
+  {#if enriching}
+    <div class="mx-auto mt-4 max-w-lg rounded-lg border border-border bg-bg-card p-4">
+      <div class="mb-2 flex items-center justify-between text-sm">
+        <span class="text-text-heading">Fetching market prices...</span>
+        <span class="text-text">{enrichProgress} / {enrichTotal}</span>
+      </div>
+      <div class="h-2 overflow-hidden rounded-full bg-border">
+        <div
+          class="h-full rounded-full bg-accent transition-[width] duration-100 ease-linear"
+          style="width: {enrichTotal > 0 ? (enrichProgress / enrichTotal) * 100 : 0}%"
+        ></div>
+      </div>
+    </div>
   {/if}
 
   <!-- Error message -->

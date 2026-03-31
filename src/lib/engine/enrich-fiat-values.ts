@@ -16,28 +16,43 @@ const resolveAssetAndAmount = (tx: Transaction): { asset: string; amount: BigNum
  * Fills in missing fiatValue/fiatCurrency on transactions by looking up
  * rates from the provided converter. Transactions that already have
  * fiatValue are left untouched. Returns a new array (no mutation).
+ *
+ * Processes sequentially so `onProgress` can report meaningful updates.
  */
 export const enrichFiatValues = async (
   transactions: Transaction[],
   converter: ICryptoToFiatConverter,
   fiatCurrency: string,
-): Promise<Transaction[]> =>
-  Promise.all(
-    transactions.map(async (tx) => {
-      if (tx.fiatValue !== undefined) return tx;
+  onProgress?: (completed: number, total: number) => void,
+): Promise<Transaction[]> => {
+  const total = transactions.length;
+  const results: Transaction[] = [];
 
-      const resolved = resolveAssetAndAmount(tx);
-      if (!resolved) return tx;
+  for (let i = 0; i < transactions.length; i++) {
+    const tx = transactions[i];
 
-      try {
-        const rate = await converter.getRate(resolved.asset, fiatCurrency, tx.date);
-        return {
-          ...tx,
-          fiatCurrency,
-          fiatValue: resolved.amount.times(rate),
-        };
-      } catch {
-        return tx;
-      }
-    }),
-  );
+    if (tx.fiatValue !== undefined) {
+      results.push(tx);
+      onProgress?.(i + 1, total);
+      continue;
+    }
+
+    const resolved = resolveAssetAndAmount(tx);
+    if (!resolved) {
+      results.push(tx);
+      onProgress?.(i + 1, total);
+      continue;
+    }
+
+    try {
+      const rate = await converter.getRate(resolved.asset, fiatCurrency, tx.date);
+      results.push({ ...tx, fiatCurrency, fiatValue: resolved.amount.times(rate) });
+    } catch {
+      results.push(tx);
+    }
+
+    onProgress?.(i + 1, total);
+  }
+
+  return results;
+};
