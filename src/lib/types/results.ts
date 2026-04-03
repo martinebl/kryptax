@@ -49,7 +49,7 @@ export interface ILotTracker {
   dispose(asset: string, amount: BigNumber): DisposalResult;
   getLots(asset: string): LotRecord[];
   getAssets(): string[];
-  getHoldings(): { asset: string; totalAmount: BigNumber }[];
+  getHoldings(): { asset: string; totalAmount: BigNumber; totalCostBasis: BigNumber }[];
 }
 
 export interface ITaxCalculator {

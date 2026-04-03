@@ -115,6 +115,22 @@ describe('BinanceImporter', () => {
     expect(result[1].toAmount!.isEqualTo(bn('1007'))).toBe(true);
   });
 
+  it('handles a Binance Convert crypto-to-crypto swap as a trade', () => {
+    const csv = makeCSV(
+      '123,03-12-25 10:00:00,Spot,Binance Convert,TRX,-8461.00000053,',
+      '123,03-12-25 10:00:00,Spot,Binance Convert,BTC,0.01311455,',
+    );
+
+    const result = importer.parse(csv);
+
+    expect(result).toHaveLength(1);
+    expect(result[0].type).toBe('trade');
+    expect(result[0].fromAsset).toBe('TRX');
+    expect(result[0].fromAmount!.isEqualTo(bn('8461.00000053'))).toBe(true);
+    expect(result[0].toAsset).toBe('BTC');
+    expect(result[0].toAmount!.isEqualTo(bn('0.01311455'))).toBe(true);
+  });
+
   it('handles a crypto-to-crypto trade', () => {
     const csv = makeCSV(
       '123,22-03-15 10:00:00,Spot,Transaction Related,BTC,-0.5,',
@@ -129,6 +145,38 @@ describe('BinanceImporter', () => {
     expect(result[0].fromAmount!.isEqualTo(bn('0.5'))).toBe(true);
     expect(result[0].toAsset).toBe('ETH');
     expect(result[0].toAmount!.isEqualTo(bn('8.0'))).toBe(true);
+  });
+
+  it('treats Transaction Sell + Transaction Buy in same group as a trade, not a buy', () => {
+    const csv = makeCSV(
+      '123,22-03-15 10:00:00,Spot,Transaction Sell,TRX,-8000,',
+      '123,22-03-15 10:00:01,Spot,Transaction Buy,BTC,0.5,',
+    );
+
+    const result = importer.parse(csv);
+
+    expect(result).toHaveLength(1);
+    expect(result[0].type).toBe('trade');
+    expect(result[0].fromAsset).toBe('TRX');
+    expect(result[0].fromAmount!.isEqualTo(bn('8000'))).toBe(true);
+    expect(result[0].toAsset).toBe('BTC');
+    expect(result[0].toAmount!.isEqualTo(bn('0.5'))).toBe(true);
+  });
+
+  it('treats Sell + Buy in same group as a trade', () => {
+    const csv = makeCSV(
+      '123,22-03-15 10:00:00,Spot,Sell,TRX,-8000,',
+      '123,22-03-15 10:00:01,Spot,Buy,BTC,0.5,',
+    );
+
+    const result = importer.parse(csv);
+
+    expect(result).toHaveLength(1);
+    expect(result[0].type).toBe('trade');
+    expect(result[0].fromAsset).toBe('TRX');
+    expect(result[0].fromAmount!.isEqualTo(bn('8000'))).toBe(true);
+    expect(result[0].toAsset).toBe('BTC');
+    expect(result[0].toAmount!.isEqualTo(bn('0.5'))).toBe(true);
   });
 
   it('parses a withdrawal as a transfer-out', () => {

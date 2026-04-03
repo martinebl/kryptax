@@ -65,15 +65,19 @@ export class LotTracker implements ILotTracker {
     return [...this.lots.keys()];
   }
 
-  /** Get all remaining holdings as a flat list of { asset, totalAmount } */
-  getHoldings(): { asset: string; totalAmount: BigNumber }[] {
-    return this.getAssets().map((asset) => ({
-      asset,
-      totalAmount: this.getLots(asset).reduce(
-        (sum, lot) => sum.plus(lot.amount),
-        new BigNumber(0),
-      ),
-    }));
+  /** Get all remaining holdings as a flat list of { asset, totalAmount, totalCostBasis } */
+  getHoldings(): { asset: string; totalAmount: BigNumber; totalCostBasis: BigNumber }[] {
+    return this.getAssets().map((asset) => {
+      const lots = this.getLots(asset);
+      return {
+        asset,
+        totalAmount: lots.reduce((sum, lot) => sum.plus(lot.amount), new BigNumber(0)),
+        totalCostBasis: lots.reduce(
+          (sum, lot) => sum.plus(lot.amount.times(lot.costBasisPerUnit)),
+          new BigNumber(0),
+        ),
+      };
+    });
   }
 
   private sortLots(lots: LotRecord[]): void {

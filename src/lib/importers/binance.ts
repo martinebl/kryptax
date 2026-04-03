@@ -143,8 +143,11 @@ const splitGroup = (group: ParsedRow[]): ParsedRow[][] => {
 const resolveGroupType = (rows: ParsedRow[]): TransactionType => {
   const operations = rows.map((r) => r.operation);
 
-  if (operations.some((op) => op === 'Buy' || op === 'Transaction Buy')) return 'buy';
-  if (operations.some((op) => op === 'Sell' || op === 'Transaction Sell')) return 'sell';
+  const hasBuy = operations.some((op) => op === 'Buy' || op === 'Transaction Buy');
+  const hasSell = operations.some((op) => op === 'Sell' || op === 'Transaction Sell');
+  if (hasBuy && hasSell) return 'trade';
+  if (hasBuy) return 'buy';
+  if (hasSell) return 'sell';
   if (operations.some((op) => op.includes('Staking'))) return 'staking';
   if (operations.some((op) => op === 'Distribution')) return 'airdrop';
 

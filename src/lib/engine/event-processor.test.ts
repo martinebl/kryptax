@@ -232,6 +232,49 @@ describe('processTransaction', () => {
     });
   });
 
+  describe('transfer', () => {
+    it('is a no-op for lot tracking — inbound transfers do not add a new lot', () => {
+      const tracker = new LotTracker(rules.costBasisMethod);
+
+      // Buy TRX
+      processTransaction(
+        makeTx({ id: 'buy-1', type: 'buy', date: new Date('2024-01-01'), toAsset: 'TRX', toAmount: bn(8465), fiatValue: bn(500) }),
+        rules, tracker,
+      );
+
+      // Transfer out to external wallet
+      processTransaction(
+        makeTx({ id: 'send-1', type: 'transfer', date: new Date('2024-02-01'), fromAsset: 'TRX', fromAmount: bn(8465) }),
+        rules, tracker,
+      );
+
+      // Transfer back in (slightly less due to network fee)
+      processTransaction(
+        makeTx({ id: 'recv-1', type: 'transfer', date: new Date('2024-02-15'), toAsset: 'TRX', toAmount: bn(8461) }),
+        rules, tracker,
+      );
+
+      // Should still have only the original lot — inbound transfer must not create a duplicate
+      expect(tracker.getLots('TRX')).toHaveLength(1);
+      expect(tracker.getLots('TRX')[0].amount.toNumber()).toBe(8465);
+    });
+
+    it('returns no tax events for transfers', () => {
+      const tracker = new LotTracker(rules.costBasisMethod);
+      const outEvents = processTransaction(
+        makeTx({ id: 'send-1', type: 'transfer', date: new Date('2024-01-01'), fromAsset: 'BTC', fromAmount: bn(1) }),
+        rules, tracker,
+      );
+      const inEvents = processTransaction(
+        makeTx({ id: 'recv-1', type: 'transfer', date: new Date('2024-01-02'), toAsset: 'BTC', toAmount: bn(1) }),
+        rules, tracker,
+      );
+
+      expect(outEvents).toHaveLength(0);
+      expect(inEvents).toHaveLength(0);
+    });
+  });
+
   describe('fee', () => {
     it('creates a disposal event for fees paid in crypto', () => {
       const tracker = new LotTracker(rules.costBasisMethod);

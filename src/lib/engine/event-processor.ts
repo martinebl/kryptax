@@ -115,8 +115,10 @@ export const processTransaction = (
 ): TaxableEvent[] => {
   switch (tx.type) {
     case 'buy':
-    case 'transfer':
       addLotFromTransaction(tx, lotTracker);
+      return [];
+
+    case 'transfer':
       return [];
 
     case 'sell':

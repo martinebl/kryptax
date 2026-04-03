@@ -43,6 +43,7 @@
   const txAsset = (tx: Transaction) => tx.toAsset ?? tx.fromAsset ?? tx.feeAsset ?? '—';
   const txAmount = (tx: Transaction) => tx.toAmount ?? tx.fromAmount ?? tx.feeAmount;
   const txDirection = (tx: Transaction) => tx.toAmount ? '+' : tx.fromAmount ? '-' : '';
+  const isTrade = (tx: Transaction) => tx.type === 'trade' && tx.fromAsset && tx.toAsset;
 
   const typeBadgeClass = (type: string) => {
     const map: Record<string, string> = {
@@ -139,6 +140,34 @@
       </div>
     {/if}
 
+    <!-- Current holdings table -->
+    {#if holdings.length > 0}
+      <h3 class="mb-4 font-heading text-lg font-medium text-text-heading">Current Holdings</h3>
+      <div class="mb-10 overflow-x-auto rounded-xl border border-border">
+        <table class="w-full text-left text-sm">
+          <thead>
+            <tr class="border-b border-border bg-bg-card text-xs uppercase tracking-wide text-text">
+              <th class="px-4 py-3">Asset</th>
+              <th class="px-4 py-3 text-right">Amount</th>
+              <th class="px-4 py-3 text-right">Total Cost Basis</th>
+              <th class="px-4 py-3 text-right">Avg Cost / Unit</th>
+            </tr>
+          </thead>
+          <tbody>
+            {#each holdings.filter((h) => h.totalAmount.gt(0)) as holding}
+              {@const avgCost = holding.totalCostBasis.div(holding.totalAmount)}
+              <tr class="border-b border-border last:border-none hover:bg-bg-card/50">
+                <td class="px-4 py-3 font-medium text-text-heading">{holding.asset}</td>
+                <td class="px-4 py-3 text-right font-mono text-text-heading">{holding.totalAmount.toFormat(8)}</td>
+                <td class="px-4 py-3 text-right font-mono text-text-heading">{fmt(holding.totalCostBasis)} {rules.currency}</td>
+                <td class="px-4 py-3 text-right font-mono text-text">{fmt(avgCost)} {rules.currency}</td>
+              </tr>
+            {/each}
+          </tbody>
+        </table>
+      </div>
+    {/if}
+
     <!-- Simulate full sell -->
     {#if holdings.length > 0}
       <SimulationPanel {transactions} {holdings} {summary} {rules} />
@@ -214,9 +243,21 @@
                   {tx.type}
                 </span>
               </td>
-              <td class="px-4 py-3 font-medium text-text-heading">{txAsset(tx)}</td>
+              <td class="px-4 py-3 font-medium text-text-heading">
+                {#if isTrade(tx)}
+                  <span class="text-red-500">{tx.fromAsset}</span>
+                  <span class="text-text mx-1">→</span>
+                  <span class="text-green-600">{tx.toAsset}</span>
+                {:else}
+                  {txAsset(tx)}
+                {/if}
+              </td>
               <td class="px-4 py-3 text-right font-mono text-text-heading">
-                {#if amount}
+                {#if isTrade(tx)}
+                  <span class="text-red-500">-{tx.fromAmount?.toFormat(8)}</span>
+                  <span class="text-text mx-1">/</span>
+                  <span class="text-green-600">+{tx.toAmount?.toFormat(8)}</span>
+                {:else if amount}
                   <span class={txDirection(tx) === '+' ? 'text-green-600' : txDirection(tx) === '-' ? 'text-red-500' : ''}>
                     {txDirection(tx)}{amount.toFormat(8)}
                   </span>
