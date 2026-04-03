@@ -41,9 +41,15 @@ npm run preview
 
 ## Data sources & accuracy
 
-Historical cryptocurrency prices are fetched from the [CoinGecko API](https://www.coingecko.com/en/api) (free tier, no API key required). Prices are **daily snapshots at midnight UTC** — intra-day price movements are not captured, so the values used may differ slightly from the exact price at the time of your transaction. This is generally acceptable for tax reporting purposes, but you should verify the results against your own records.
+Cryptax resolves historical prices through two sources, tried in order:
 
-Requests to CoinGecko are rate-limited (~28 requests/minute) and cached per asset per date, so importing large transaction files may take a moment while prices are fetched.
+1. **Local CSV files** — you can import daily crypto price csv's in the UI, Cryptax will use those first. This is the fastest and most reliable option, and it keeps all matching crypto price lookups fully offline. These files can be constructed with data from Yahoo Finance or Investing dot com.
+
+2. **CoinGecko API** — for any asset not covered by a local CSV, Cryptax falls back to the [CoinGecko API](https://www.coingecko.com/en/api) (free tier, no API key required). Requests are rate-limited and cached per asset per date, so importing large files may take a moment. Note that the free tier is limited to one year of historical data, so any asset prices from > 1 year ago, that are not found in csv price files, will result in a failed call to CoinGecko and a 0 cost basis.
+
+Fiat-to-fiat conversions (e.g. USD → DKK) are handled by the [Frankfurter API](https://www.frankfurter.app), backed by European Central Bank data — free and no API key required.
+
+Prices are **daily snapshots** — intra-day price movements are not captured, so the values used may differ slightly from the exact price at the time of your transaction. This is generally acceptable for tax reporting purposes, but you should verify the results against your own records.
 
 ## Contributing
 
@@ -51,6 +57,10 @@ Contributions are welcome! There are two great ways to help:
 
 - **Add tax rules for new countries** — see `src/lib/types/tax-rules.ts` for the JSON schema that country rule files follow, and `src/lib/rules/` for existing examples.
 - **Add exchange importers** — see `src/lib/importers/` for existing importers (Binance, Ledger) to use as a reference.
+
+## Built with Claude Code
+
+This project was built with the help of [Claude Code](https://claude.ai/code), Anthropic's agentic coding tool. Learning to develop software collaboratively with agentic AI was a deliberate part of this project — exploring what that workflow looks like in practice, where it helps, and where it falls short.
 
 ## License
 
