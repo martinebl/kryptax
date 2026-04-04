@@ -26,7 +26,7 @@ describe('BinanceImporter', () => {
 
   it('parses a fiat deposit as a single transfer-in', () => {
     const csv = makeCSV(
-      '123,21-11-08 16:41:01,Spot,Deposit,USD,545,',
+      '123,20-03-15 10:00:00,Spot,Deposit,USD,545,',
     );
 
     const result = importer.parse(csv);
@@ -39,8 +39,8 @@ describe('BinanceImporter', () => {
 
   it('groups related rows by timestamp into a buy transaction', () => {
     const csv = makeCSV(
-      '123,21-11-08 16:41:01,Spot,Transaction Related,USD,-545,',
-      '123,21-11-08 16:41:02,Spot,Buy,BTC,0.012,',
+      '123,20-03-15 10:00:00,Spot,Transaction Related,USD,-545,',
+      '123,20-03-15 10:00:01,Spot,Buy,BTC,0.012,',
     );
 
     const result = importer.parse(csv);
@@ -55,8 +55,8 @@ describe('BinanceImporter', () => {
 
   it('groups related rows into a sell transaction', () => {
     const csv = makeCSV(
-      '123,21-11-08 16:41:01,Spot,Sell,BTC,-0.012,',
-      '123,21-11-08 16:41:02,Spot,Transaction Related,USD,545,',
+      '123,20-03-15 10:00:00,Spot,Sell,BTC,-0.012,',
+      '123,20-03-15 10:00:01,Spot,Transaction Related,USD,545,',
     );
 
     const result = importer.parse(csv);
@@ -71,9 +71,9 @@ describe('BinanceImporter', () => {
 
   it('groups a buy with a fee row', () => {
     const csv = makeCSV(
-      '123,21-11-08 16:41:01,Spot,Transaction Related,USD,-100,',
-      '123,21-11-08 16:41:01,Spot,Buy,BTC,0.002,',
-      '123,21-11-08 16:41:01,Spot,Fee,BNB,-0.001,',
+      '123,20-03-15 10:00:00,Spot,Transaction Related,USD,-100,',
+      '123,20-03-15 10:00:00,Spot,Buy,BTC,0.002,',
+      '123,20-03-15 10:00:00,Spot,Fee,BNB,-0.001,',
     );
 
     const result = importer.parse(csv);
@@ -90,12 +90,12 @@ describe('BinanceImporter', () => {
 
   it('treats deposit + auto-conversion as a buy', () => {
     const csv = makeCSV(
-      '123,22-12-01 17:12:01,Spot,Deposit,USD,545,',
-      '123,22-12-01 17:12:02,Spot,Transaction Related,BUSD,545,',
-      '123,22-12-01 17:12:02,Spot,Transaction Related,USD,-545,',
-      '123,22-12-01 19:51:44,Spot,Deposit,USD,1007,',
-      '123,22-12-01 19:51:45,Spot,Transaction Related,BUSD,1007,',
-      '123,22-12-01 19:51:45,Spot,Transaction Related,USD,-1007,',
+      '123,21-07-20 14:00:00,Spot,Deposit,USD,545,',
+      '123,21-07-20 14:00:01,Spot,Transaction Related,BUSD,545,',
+      '123,21-07-20 14:00:01,Spot,Transaction Related,USD,-545,',
+      '123,21-07-20 16:00:00,Spot,Deposit,USD,1007,',
+      '123,21-07-20 16:00:01,Spot,Transaction Related,BUSD,1007,',
+      '123,21-07-20 16:00:01,Spot,Transaction Related,USD,-1007,',
     );
 
     const result = importer.parse(csv);
@@ -117,8 +117,8 @@ describe('BinanceImporter', () => {
 
   it('handles a Binance Convert crypto-to-crypto swap as a trade', () => {
     const csv = makeCSV(
-      '123,03-12-25 10:00:00,Spot,Binance Convert,TRX,-8461.00000053,',
-      '123,03-12-25 10:00:00,Spot,Binance Convert,BTC,0.01311455,',
+      '123,22-06-10 08:00:00,Spot,Binance Convert,TRX,-8461.00000053,',
+      '123,22-06-10 08:00:00,Spot,Binance Convert,BTC,0.01311455,',
     );
 
     const result = importer.parse(csv);
@@ -133,8 +133,8 @@ describe('BinanceImporter', () => {
 
   it('handles a crypto-to-crypto trade', () => {
     const csv = makeCSV(
-      '123,22-03-15 10:00:00,Spot,Transaction Related,BTC,-0.5,',
-      '123,22-03-15 10:00:01,Spot,Transaction Related,ETH,8.0,',
+      '123,21-09-05 11:00:00,Spot,Transaction Related,BTC,-0.5,',
+      '123,21-09-05 11:00:01,Spot,Transaction Related,ETH,8.0,',
     );
 
     const result = importer.parse(csv);
@@ -149,8 +149,8 @@ describe('BinanceImporter', () => {
 
   it('treats Transaction Sell + Transaction Buy in same group as a trade, not a buy', () => {
     const csv = makeCSV(
-      '123,22-03-15 10:00:00,Spot,Transaction Sell,TRX,-8000,',
-      '123,22-03-15 10:00:01,Spot,Transaction Buy,BTC,0.5,',
+      '123,21-09-05 11:00:00,Spot,Transaction Sell,TRX,-8000,',
+      '123,21-09-05 11:00:01,Spot,Transaction Buy,BTC,0.5,',
     );
 
     const result = importer.parse(csv);
@@ -165,8 +165,8 @@ describe('BinanceImporter', () => {
 
   it('treats Sell + Buy in same group as a trade', () => {
     const csv = makeCSV(
-      '123,22-03-15 10:00:00,Spot,Sell,TRX,-8000,',
-      '123,22-03-15 10:00:01,Spot,Buy,BTC,0.5,',
+      '123,21-09-05 11:00:00,Spot,Sell,TRX,-8000,',
+      '123,21-09-05 11:00:01,Spot,Buy,BTC,0.5,',
     );
 
     const result = importer.parse(csv);
@@ -181,7 +181,7 @@ describe('BinanceImporter', () => {
 
   it('parses a withdrawal as a transfer-out', () => {
     const csv = makeCSV(
-      '123,21-12-01 09:00:00,Spot,Withdraw,BTC,-0.5,',
+      '123,20-11-30 09:00:00,Spot,Withdraw,BTC,-0.5,',
     );
 
     const result = importer.parse(csv);
@@ -194,8 +194,8 @@ describe('BinanceImporter', () => {
 
   it('keeps unrelated rows as separate transactions', () => {
     const csv = makeCSV(
-      '123,21-11-08 16:41:01,Spot,Deposit,USD,545,',
-      '123,22-03-15 10:00:00,Spot,Withdraw,BTC,-0.5,',
+      '123,20-03-15 10:00:00,Spot,Deposit,USD,545,',
+      '123,21-09-05 11:00:00,Spot,Withdraw,BTC,-0.5,',
     );
 
     const result = importer.parse(csv);
@@ -205,9 +205,9 @@ describe('BinanceImporter', () => {
 
   it('handles multiple groups in the same CSV', () => {
     const csv = makeCSV(
-      '123,21-11-08 16:41:01,Spot,Transaction Related,USD,-545,',
-      '123,21-11-08 16:41:02,Spot,Buy,BTC,0.012,',
-      '123,22-03-15 10:00:00,Spot,Deposit,USD,1000,',
+      '123,20-03-15 10:00:00,Spot,Transaction Related,USD,-545,',
+      '123,20-03-15 10:00:01,Spot,Buy,BTC,0.012,',
+      '123,21-09-05 11:00:00,Spot,Deposit,USD,1000,',
     );
 
     const result = importer.parse(csv);
@@ -219,7 +219,7 @@ describe('BinanceImporter', () => {
 
   it('parses staking rewards', () => {
     const csv = makeCSV(
-      '123,22-06-01 00:00:00,Spot,Staking Rewards,DOT,0.05,',
+      '123,21-12-01 00:00:00,Spot,Staking Rewards,DOT,0.05,',
     );
 
     const result = importer.parse(csv);
@@ -232,7 +232,7 @@ describe('BinanceImporter', () => {
 
   it('sets exchange to Binance on all transactions', () => {
     const csv = makeCSV(
-      '123,21-11-08 16:41:01,Spot,Deposit,USD,545,',
+      '123,20-03-15 10:00:00,Spot,Deposit,USD,545,',
     );
 
     const result = importer.parse(csv);
@@ -242,25 +242,25 @@ describe('BinanceImporter', () => {
 
   it('parses the date correctly', () => {
     const csv = makeCSV(
-      '123,21-11-08 16:41:01,Spot,Deposit,USD,545,',
+      '123,20-03-15 10:00:00,Spot,Deposit,USD,545,',
     );
 
     const result = importer.parse(csv);
     const d = result[0].date;
 
-    expect(d.getUTCFullYear()).toBe(2021);
-    expect(d.getUTCMonth()).toBe(10); // November = 10
-    expect(d.getUTCDate()).toBe(8);
+    expect(d.getUTCFullYear()).toBe(2020);
+    expect(d.getUTCMonth()).toBe(2); // March = 2
+    expect(d.getUTCDate()).toBe(15);
   });
 
   it('merges multiple same-coin rows within a group', () => {
     const csv = makeCSV(
-      '123,24-03-14 23:34:35,Spot,Transaction Spend,USDT,-597.8206,',
-      '123,24-03-14 23:34:35,Spot,Transaction Fee,BTC,-0.00000845,',
-      '123,24-03-14 23:34:35,Spot,Transaction Spend,USDT,-341.71284,',
-      '123,24-03-14 23:34:35,Spot,Transaction Fee,BTC,-0.00000483,',
-      '123,24-03-14 23:34:35,Spot,Transaction Buy,BTC,0.00483,',
-      '123,24-03-14 23:34:35,Spot,Transaction Buy,BTC,0.00845,',
+      '123,22-08-20 15:30:00,Spot,Transaction Spend,USDT,-597.8206,',
+      '123,22-08-20 15:30:00,Spot,Transaction Fee,BTC,-0.00000845,',
+      '123,22-08-20 15:30:00,Spot,Transaction Spend,USDT,-341.71284,',
+      '123,22-08-20 15:30:00,Spot,Transaction Fee,BTC,-0.00000483,',
+      '123,22-08-20 15:30:00,Spot,Transaction Buy,BTC,0.00483,',
+      '123,22-08-20 15:30:00,Spot,Transaction Buy,BTC,0.00845,',
     );
 
     const result = importer.parse(csv);
@@ -277,9 +277,9 @@ describe('BinanceImporter', () => {
 
   it('splits concurrent buys of different assets into separate transactions', () => {
     const csv = makeCSV(
-      '123,24-03-14 23:34:35,Spot,Transaction Spend,USDT,-600,',
-      '123,24-03-14 23:34:35,Spot,Transaction Buy,BTC,0.01,',
-      '123,24-03-14 23:34:35,Spot,Transaction Buy,ETH,0.5,',
+      '123,22-08-20 15:30:00,Spot,Transaction Spend,USDT,-600,',
+      '123,22-08-20 15:30:00,Spot,Transaction Buy,BTC,0.01,',
+      '123,22-08-20 15:30:00,Spot,Transaction Buy,ETH,0.5,',
     );
 
     const result = importer.parse(csv);
@@ -303,9 +303,9 @@ describe('BinanceImporter', () => {
 
   it('recognizes Transaction Buy/Spend/Fee operation names', () => {
     const csv = makeCSV(
-      '123,24-03-14 23:34:35,Spot,Transaction Spend,USDT,-100,',
-      '123,24-03-14 23:34:35,Spot,Transaction Buy,BTC,0.002,',
-      '123,24-03-14 23:34:35,Spot,Transaction Fee,BNB,-0.001,',
+      '123,22-08-20 15:30:00,Spot,Transaction Spend,USDT,-100,',
+      '123,22-08-20 15:30:00,Spot,Transaction Buy,BTC,0.002,',
+      '123,22-08-20 15:30:00,Spot,Transaction Fee,BNB,-0.001,',
     );
 
     const result = importer.parse(csv);
@@ -318,7 +318,7 @@ describe('BinanceImporter', () => {
 
   it('handles a distribution (airdrop)', () => {
     const csv = makeCSV(
-      '123,22-01-10 12:00:00,Spot,Distribution,LUNA,10.0,',
+      '123,21-04-15 12:00:00,Spot,Distribution,LUNA,10.0,',
     );
 
     const result = importer.parse(csv);

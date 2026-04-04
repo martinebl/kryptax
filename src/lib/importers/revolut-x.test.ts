@@ -24,7 +24,7 @@ describe('RevolutXImporter', () => {
 
   it('skips "Other" rows (fiat deposits)', () => {
     const csv = makeCsv(
-      'DKK,Other,,,500.00 DKK,0.00 DKK,"22 Mar 2026, 10:12:18"',
+      'DKK,Other,,,500.00 DKK,0.00 DKK,"14 Apr 2021, 09:15:22"',
     );
     const txs = importer.parse(csv);
     expect(txs).toHaveLength(0);
@@ -32,7 +32,7 @@ describe('RevolutXImporter', () => {
 
   it('parses a Buy with USD-prefixed values', () => {
     const csv = makeCsv(
-      'BTC,Buy - Revolut X,0.01916167,$66800.02,$1280.00,$0.00,"31 Mar 2026, 10:42:41"',
+      'BTC,Buy - Revolut X,0.01916167,$66800.02,$1280.00,$0.00,"28 Jun 2021, 14:30:00"',
     );
     const txs = importer.parse(csv);
     expect(txs).toHaveLength(1);
@@ -51,7 +51,7 @@ describe('RevolutXImporter', () => {
 
   it('parses a Buy with DKK-suffixed values', () => {
     const csv = makeCsv(
-      'BTC,Buy - Revolut X,0.005,450000.00 DKK,2250.00 DKK,10.00 DKK,"15 Mar 2026, 14:30:00"',
+      'BTC,Buy - Revolut X,0.005,450000.00 DKK,2250.00 DKK,10.00 DKK,"10 Sep 2021, 11:00:00"',
     );
     const txs = importer.parse(csv);
     expect(txs).toHaveLength(1);
@@ -68,7 +68,7 @@ describe('RevolutXImporter', () => {
 
   it('parses a Sell transaction', () => {
     const csv = makeCsv(
-      'BTC,Sell - Revolut X,0.01,$70000.00,$700.00,$1.50,"10 Mar 2026, 09:00:00"',
+      'BTC,Sell - Revolut X,0.01,$70000.00,$700.00,$1.50,"05 Feb 2021, 08:00:00"',
     );
     const txs = importer.parse(csv);
     expect(txs).toHaveLength(1);
@@ -87,7 +87,7 @@ describe('RevolutXImporter', () => {
 
   it('parses a Send (outbound transfer)', () => {
     const csv = makeCsv(
-      'BTC,Send,0.02133545,439980.15 DKK,9387.17 DKK,27.07 DKK,"31 Mar 2026, 11:11:10"',
+      'BTC,Send,0.02133545,439980.15 DKK,9387.17 DKK,27.07 DKK,"28 Jun 2021, 15:45:10"',
     );
     const txs = importer.parse(csv);
     expect(txs).toHaveLength(1);
@@ -105,7 +105,7 @@ describe('RevolutXImporter', () => {
 
   it('parses a Receive (inbound transfer)', () => {
     const csv = makeCsv(
-      'ETH,Receive,1.5,2500.00 DKK,3750.00 DKK,0.00 DKK,"20 Mar 2026, 08:00:00"',
+      'ETH,Receive,1.5,2500.00 DKK,3750.00 DKK,0.00 DKK,"20 Nov 2021, 10:00:00"',
     );
     const txs = importer.parse(csv);
     expect(txs).toHaveLength(1);
@@ -121,21 +121,21 @@ describe('RevolutXImporter', () => {
 
   it('parses dates correctly', () => {
     const csv = makeCsv(
-      'BTC,Buy - Revolut X,0.01,$50000.00,$500.00,$0.00,"5 Jan 2026, 09:05"',
+      'BTC,Buy - Revolut X,0.01,$50000.00,$500.00,$0.00,"5 Mar 2021, 09:05"',
     );
     const txs = importer.parse(csv);
     const date = txs[0].date;
-    expect(date.getFullYear()).toBe(2026);
-    expect(date.getMonth()).toBe(0); // January
+    expect(date.getFullYear()).toBe(2021);
+    expect(date.getMonth()).toBe(2); // March
     expect(date.getDate()).toBe(5);
   });
 
   it('handles a mixed CSV with Other rows filtered out', () => {
     const csv = makeCsv(
-      'DKK,Other,,,500.00 DKK,0.00 DKK,"22 Mar 2026, 10:12:18"',
-      'DKK,Other,,,500.00 DKK,0.00 DKK,"22 Mar 2026, 10:14"',
-      'BTC,Buy - Revolut X,0.01916167,$66800.02,$1280.00,$0.00,"31 Mar 2026, 10:42:41"',
-      'BTC,Send,0.02133545,439980.15 DKK,9387.17 DKK,27.07 DKK,"31 Mar 2026, 11:11:10"',
+      'DKK,Other,,,500.00 DKK,0.00 DKK,"14 Apr 2021, 09:15:22"',
+      'DKK,Other,,,500.00 DKK,0.00 DKK,"14 Apr 2021, 09:17"',
+      'BTC,Buy - Revolut X,0.01916167,$66800.02,$1280.00,$0.00,"28 Jun 2021, 14:30:00"',
+      'BTC,Send,0.02133545,439980.15 DKK,9387.17 DKK,27.07 DKK,"28 Jun 2021, 15:45:10"',
     );
     const txs = importer.parse(csv);
     expect(txs).toHaveLength(2);
@@ -145,8 +145,8 @@ describe('RevolutXImporter', () => {
 
   it('generates unique IDs per transaction', () => {
     const csv = makeCsv(
-      'BTC,Buy - Revolut X,0.01,$50000.00,$500.00,$0.00,"5 Jan 2026, 09:05"',
-      'ETH,Buy - Revolut X,1.0,$3000.00,$3000.00,$0.00,"6 Jan 2026, 10:00:00"',
+      'BTC,Buy - Revolut X,0.01,$50000.00,$500.00,$0.00,"5 Mar 2021, 09:05"',
+      'ETH,Buy - Revolut X,1.0,$3000.00,$3000.00,$0.00,"6 Mar 2021, 10:00:00"',
     );
     const txs = importer.parse(csv);
     const ids = txs.map((t) => t.id);

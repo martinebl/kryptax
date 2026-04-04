@@ -8,27 +8,27 @@ const bn = (n: number | string) => new BigNumber(n);
 
 const YAHOO_CSV = [
   'Date,Open,High,Low,Close,Adjusted Close,Volume',
-  '"Apr 1, 2026","68,224.47","69,191.27","67,591.14","68,675.74","68,675.74","40,216,952,832"',
-  '"Mar 31, 2026","66,694.59","68,495.27","65,950.44","68,233.31","68,233.31","42,997,691,338"',
-  '"Jan 5, 2024",43500.00,44100.00,43200.00,43800.00,43800.00,"25,000,000,000"',
+  '"Apr 1, 2021","68,224.47","69,191.27","67,591.14","68,675.74","68,675.74","40,216,952,832"',
+  '"Mar 31, 2021","66,694.59","68,495.27","65,950.44","68,233.31","68,233.31","42,997,691,338"',
+  '"Jan 5, 2021",43500.00,44100.00,43200.00,43800.00,43800.00,"25,000,000,000"',
 ].join('\n');
 
 const ISO_CSV = [
   'Date,Open,High,Low,Close,Volume',
-  '2026-04-01,68224.47,69191.27,67591.14,68675.74,40216952832',
-  '2026-03-31,66694.59,68495.27,65950.44,68233.31,42997691338',
+  '2021-04-01,68224.47,69191.27,67591.14,68675.74,40216952832',
+  '2021-03-31,66694.59,68495.27,65950.44,68233.31,42997691338',
 ].join('\n');
 
 const SLASH_CSV = [
   'Date,Price',
-  '2026/04/01,68675.74',
-  '2026/03/31,68233.31',
+  '2021/04/01,68675.74',
+  '2021/03/31,68233.31',
 ].join('\n');
 
 const US_DATE_CSV = [
   'Date,Price',
-  '04/01/2026,68675.74',
-  '03/31/2026,68233.31',
+  '04/01/2021,68675.74',
+  '03/31/2021,68233.31',
 ].join('\n');
 
 const mockFiat: IFiatConverter = {
@@ -99,33 +99,33 @@ describe('detectColumns', () => {
 describe('parsePriceCSV date formats', () => {
   it('parses Yahoo Finance "Mon DD, YYYY" format', () => {
     const prices = parsePriceCSV(YAHOO_CSV);
-    expect(prices.get('2026-04-01')?.toNumber()).toBeCloseTo(68675.74);
-    expect(prices.get('2026-03-31')?.toNumber()).toBeCloseTo(68233.31);
+    expect(prices.get('2021-04-01')?.toNumber()).toBeCloseTo(68675.74);
+    expect(prices.get('2021-03-31')?.toNumber()).toBeCloseTo(68233.31);
   });
 
   it('parses ISO YYYY-MM-DD format', () => {
     const prices = parsePriceCSV(ISO_CSV);
-    expect(prices.get('2026-04-01')?.toNumber()).toBeCloseTo(68675.74);
-    expect(prices.get('2026-03-31')?.toNumber()).toBeCloseTo(68233.31);
+    expect(prices.get('2021-04-01')?.toNumber()).toBeCloseTo(68675.74);
+    expect(prices.get('2021-03-31')?.toNumber()).toBeCloseTo(68233.31);
   });
 
   it('parses YYYY/MM/DD format', () => {
     const prices = parsePriceCSV(SLASH_CSV);
-    expect(prices.get('2026-04-01')?.toNumber()).toBeCloseTo(68675.74);
-    expect(prices.get('2026-03-31')?.toNumber()).toBeCloseTo(68233.31);
+    expect(prices.get('2021-04-01')?.toNumber()).toBeCloseTo(68675.74);
+    expect(prices.get('2021-03-31')?.toNumber()).toBeCloseTo(68233.31);
   });
 
   it('parses US MM/DD/YYYY format', () => {
     const prices = parsePriceCSV(US_DATE_CSV);
-    expect(prices.get('2026-04-01')?.toNumber()).toBeCloseTo(68675.74);
-    expect(prices.get('2026-03-31')?.toNumber()).toBeCloseTo(68233.31);
+    expect(prices.get('2021-04-01')?.toNumber()).toBeCloseTo(68675.74);
+    expect(prices.get('2021-03-31')?.toNumber()).toBeCloseTo(68233.31);
   });
 
   it('skips rows with unparseable dates', () => {
-    const csv = 'Date,Price\nnot-a-date,100\n2026-04-01,200';
+    const csv = 'Date,Price\nnot-a-date,100\n2021-04-01,200';
     const prices = parsePriceCSV(csv);
     expect(prices.size).toBe(1);
-    expect(prices.get('2026-04-01')?.toNumber()).toBeCloseTo(200);
+    expect(prices.get('2021-04-01')?.toNumber()).toBeCloseTo(200);
   });
 });
 
@@ -136,18 +136,18 @@ describe('parsePriceCSV date formats', () => {
 describe('parsePriceCSV column mapping', () => {
   it('auto-detects columns from headers', () => {
     const prices = parsePriceCSV(YAHOO_CSV);
-    expect(prices.get('2026-04-01')?.toNumber()).toBeCloseTo(68675.74);
+    expect(prices.get('2021-04-01')?.toNumber()).toBeCloseTo(68675.74);
   });
 
   it('uses explicit column mapping when provided', () => {
     // SLASH_CSV has Date in col 0, Price in col 1
     const prices = parsePriceCSV(SLASH_CSV, { dateCol: 0, priceCol: 1 });
-    expect(prices.get('2026-04-01')?.toNumber()).toBeCloseTo(68675.74);
+    expect(prices.get('2021-04-01')?.toNumber()).toBeCloseTo(68675.74);
   });
 
   it('handles prices with comma thousand-separators', () => {
     const prices = parsePriceCSV(YAHOO_CSV);
-    expect(prices.get('2026-04-01')?.toNumber()).toBeCloseTo(68675.74);
+    expect(prices.get('2021-04-01')?.toNumber()).toBeCloseTo(68675.74);
   });
 
   it('returns an empty map for a header-only CSV', () => {
@@ -168,7 +168,7 @@ describe('createCsvCryptoToFiatConverter', () => {
 
   it('returns the close price converted to target currency', async () => {
     const converter = createCsvCryptoToFiatConverter(pricesByAsset, mockFiat);
-    const rate = await converter.getRate('BTC', 'DKK', new Date('2026-04-01'));
+    const rate = await converter.getRate('BTC', 'DKK', new Date('2021-04-01'));
     expect(rate.isEqualTo(bn(68675.74).times(6.85))).toBe(true);
   });
 
@@ -178,13 +178,13 @@ describe('createCsvCryptoToFiatConverter', () => {
       getRate: async (from, to) => { fiatCalled = true; return mockFiat.getRate(from, to, new Date()); },
     };
     const converter = createCsvCryptoToFiatConverter(pricesByAsset, trackingFiat);
-    await converter.getRate('BTC', 'USD', new Date('2026-04-01'));
+    await converter.getRate('BTC', 'USD', new Date('2021-04-01'));
     expect(fiatCalled).toBe(false);
   });
 
   it('resolves ticker to coinId (BTC → bitcoin)', async () => {
     const converter = createCsvCryptoToFiatConverter(pricesByAsset, mockFiat);
-    const rate = await converter.getRate('BTC', 'USD', new Date('2026-04-01'));
+    const rate = await converter.getRate('BTC', 'USD', new Date('2021-04-01'));
     expect(rate.isEqualTo(bn(68675.74))).toBe(true);
   });
 
@@ -194,7 +194,7 @@ describe('createCsvCryptoToFiatConverter', () => {
       ['bitcoin', { prices: eurPrices, currency: 'EUR' }],
     ]);
     const converter = createCsvCryptoToFiatConverter(eurByAsset, mockFiat);
-    const rate = await converter.getRate('BTC', 'DKK', new Date('2026-04-01'));
+    const rate = await converter.getRate('BTC', 'DKK', new Date('2021-04-01'));
     // 68675.74 EUR × 7.46 DKK/EUR
     expect(rate.isEqualTo(bn(68675.74).times(7.46))).toBe(true);
   });
@@ -209,37 +209,37 @@ describe('createCsvCryptoToFiatConverter', () => {
       getRate: async (from, to) => { fiatCalled = true; return mockFiat.getRate(from, to, new Date()); },
     };
     const converter = createCsvCryptoToFiatConverter(eurByAsset, trackingFiat);
-    const rate = await converter.getRate('BTC', 'EUR', new Date('2026-04-01'));
+    const rate = await converter.getRate('BTC', 'EUR', new Date('2021-04-01'));
     expect(fiatCalled).toBe(false);
     expect(rate.isEqualTo(bn(68675.74))).toBe(true);
   });
 
   it('throws when the exact date is missing (no lookback configured)', async () => {
     const converter = createCsvCryptoToFiatConverter(pricesByAsset, mockFiat);
-    await expect(converter.getRate('BTC', 'USD', new Date('2026-04-02'))).rejects.toThrow();
+    await expect(converter.getRate('BTC', 'USD', new Date('2021-04-02'))).rejects.toThrow();
   });
 
   it('routes fiat currency directly to fiat converter', async () => {
     const converter = createCsvCryptoToFiatConverter(pricesByAsset, mockFiat);
-    const rate = await converter.getRate('USD', 'DKK', new Date('2026-04-01'));
+    const rate = await converter.getRate('USD', 'DKK', new Date('2021-04-01'));
     expect(rate.isEqualTo(bn('6.85'))).toBe(true);
   });
 
   it('treats stablecoins as 1 USD and converts to target currency', async () => {
     const converter = createCsvCryptoToFiatConverter(pricesByAsset, mockFiat);
-    const rate = await converter.getRate('USDT', 'DKK', new Date('2026-04-01'));
+    const rate = await converter.getRate('USDT', 'DKK', new Date('2021-04-01'));
     expect(rate.isEqualTo(bn('6.85'))).toBe(true);
   });
 
   it('returns 1 for stablecoin when target currency is USD', async () => {
     const converter = createCsvCryptoToFiatConverter(pricesByAsset, mockFiat);
-    const rate = await converter.getRate('BUSD', 'USD', new Date('2026-04-01'));
+    const rate = await converter.getRate('BUSD', 'USD', new Date('2021-04-01'));
     expect(rate.isEqualTo(bn(1))).toBe(true);
   });
 
   it('throws for a crypto asset not in the dataset', async () => {
     const converter = createCsvCryptoToFiatConverter(pricesByAsset, mockFiat);
-    await expect(converter.getRate('SOL', 'USD', new Date('2026-04-01'))).rejects.toThrow();
+    await expect(converter.getRate('SOL', 'USD', new Date('2021-04-01'))).rejects.toThrow();
   });
 
   it('throws when date is outside the dataset', async () => {
@@ -253,10 +253,10 @@ describe('createCsvCryptoToFiatConverter', () => {
     ]);
     const converter = createCsvCryptoToFiatConverter(mutableMap, mockFiat);
 
-    const ethPrices = new Map([['2026-04-01', new BigNumber(3000)]]);
+    const ethPrices = new Map([['2021-04-01', new BigNumber(3000)]]);
     mutableMap.set('ethereum', { prices: ethPrices, currency: 'USD' });
 
-    const rate = await converter.getRate('ETH', 'USD', new Date('2026-04-01'));
+    const rate = await converter.getRate('ETH', 'USD', new Date('2021-04-01'));
     expect(rate.isEqualTo(bn(3000))).toBe(true);
   });
 });

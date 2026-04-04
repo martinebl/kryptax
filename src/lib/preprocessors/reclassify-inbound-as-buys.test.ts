@@ -21,7 +21,7 @@ describe('reclassifyInboundAsBuys', () => {
     const txs = [makeTx({
       id: 'tx-1',
       type: 'transfer',
-      date: new Date('2024-01-15T10:30:00.000Z'),
+      date: new Date('2021-03-01T10:00:00.000Z'),
       toAsset: 'BTC',
       toAmount: bn('0.5'),
       fiatCurrency: 'DKK',
@@ -44,7 +44,7 @@ describe('reclassifyInboundAsBuys', () => {
     const txs = [makeTx({
       id: 'tx-1',
       type: 'transfer',
-      date: new Date('2024-01-15T10:30:00.000Z'),
+      date: new Date('2021-03-01T10:00:00.000Z'),
       fromAsset: 'BTC',
       fromAmount: bn('0.5'),
       fiatCurrency: 'DKK',
@@ -60,7 +60,7 @@ describe('reclassifyInboundAsBuys', () => {
     const txs = [makeTx({
       id: 'tx-1',
       type: 'transfer',
-      date: new Date('2024-01-15T10:30:00.000Z'),
+      date: new Date('2021-03-01T10:00:00.000Z'),
       toAsset: 'BTC',
       toAmount: bn('0.5'),
     })];
@@ -74,7 +74,7 @@ describe('reclassifyInboundAsBuys', () => {
     const txs = [makeTx({
       id: 'tx-1',
       type: 'transfer',
-      date: new Date('2024-01-15T10:30:00.000Z'),
+      date: new Date('2021-03-01T10:00:00.000Z'),
       toAsset: 'BTC',
       toAmount: bn('0.5'),
       fiatCurrency: 'DKK',
@@ -90,7 +90,7 @@ describe('reclassifyInboundAsBuys', () => {
     const txs = [makeTx({
       id: 'tx-1',
       type: 'sell',
-      date: new Date('2024-01-15T10:30:00.000Z'),
+      date: new Date('2021-03-01T10:00:00.000Z'),
       fromAsset: 'BTC',
       fromAmount: bn('0.5'),
       fiatCurrency: 'DKK',
@@ -107,7 +107,7 @@ describe('reclassifyInboundAsBuys', () => {
       makeTx({
         id: 'tx-1',
         type: 'transfer',
-        date: new Date('2024-01-15T10:30:00.000Z'),
+        date: new Date('2021-03-01T10:00:00.000Z'),
         toAsset: 'BTC',
         toAmount: bn('0.5'),
         fiatCurrency: 'DKK',
@@ -116,7 +116,7 @@ describe('reclassifyInboundAsBuys', () => {
       makeTx({
         id: 'tx-2',
         type: 'transfer',
-        date: new Date('2024-01-16T10:30:00.000Z'),
+        date: new Date('2021-03-02T10:00:00.000Z'),
         fromAsset: 'BTC',
         fromAmount: bn('0.3'),
         fiatCurrency: 'DKK',
@@ -125,7 +125,7 @@ describe('reclassifyInboundAsBuys', () => {
       makeTx({
         id: 'tx-3',
         type: 'fee',
-        date: new Date('2024-01-17T10:30:00.000Z'),
+        date: new Date('2021-03-03T10:00:00.000Z'),
         feeAsset: 'BTC',
         feeAmount: bn('0.0001'),
       }),
@@ -142,7 +142,7 @@ describe('reclassifyInboundAsBuys', () => {
     const tx = makeTx({
       id: 'tx-1',
       type: 'transfer',
-      date: new Date('2024-01-15T10:30:00.000Z'),
+      date: new Date('2021-03-01T10:00:00.000Z'),
       toAsset: 'BTC',
       toAmount: bn('0.5'),
       fiatCurrency: 'DKK',
@@ -156,14 +156,14 @@ describe('reclassifyInboundAsBuys', () => {
     const outbound = makeTx({
       id: 'tx-1',
       type: 'transfer',
-      date: new Date('2024-01-15T10:30:00.000Z'),
+      date: new Date('2021-03-01T10:00:00.000Z'),
       fromAsset: 'BTC',
       fromAmount: bn('0.5'),
     });
     const fee = makeTx({
       id: 'tx-2',
       type: 'fee',
-      date: new Date('2024-01-15T10:30:00.000Z'),
+      date: new Date('2021-03-01T10:00:00.000Z'),
       feeAsset: 'BTC',
       feeAmount: bn('0.0001'),
     });
@@ -177,7 +177,7 @@ describe('reclassifyInboundAsBuys', () => {
       makeTx({
         id: 'tx-1',
         type: 'transfer',
-        date: new Date('2024-01-15T10:30:00.000Z'),
+        date: new Date('2021-03-01T10:00:00.000Z'),
         toAsset: 'BTC',
         toAmount: bn('0.5'),
         fiatCurrency: 'DKK',
@@ -186,7 +186,7 @@ describe('reclassifyInboundAsBuys', () => {
       makeTx({
         id: 'tx-2',
         type: 'transfer',
-        date: new Date('2024-01-16T10:30:00.000Z'),
+        date: new Date('2021-03-02T10:00:00.000Z'),
         toAsset: 'ETH',
         toAmount: bn('2.0'),
         fiatCurrency: 'DKK',
@@ -205,7 +205,7 @@ describe('reclassifyInboundAsBuys', () => {
       makeTx({
         id: 'tx-1',
         type: 'transfer',
-        date: new Date('2024-01-15T10:30:00.000Z'),
+        date: new Date('2021-03-01T10:00:00.000Z'),
         toAsset: 'BTC',
         toAmount: bn('0.5'),
         fiatCurrency: 'DKK',
@@ -214,7 +214,7 @@ describe('reclassifyInboundAsBuys', () => {
       makeTx({
         id: 'tx-2',
         type: 'transfer',
-        date: new Date('2024-01-16T10:30:00.000Z'),
+        date: new Date('2021-03-02T10:00:00.000Z'),
         toAsset: 'ETH',
         toAmount: bn('2.0'),
         fiatCurrency: 'DKK',
@@ -232,7 +232,7 @@ describe('reclassifyInboundAsBuys', () => {
     const original = makeTx({
       id: 'tx-1',
       type: 'transfer',
-      date: new Date('2024-01-15T10:30:00.000Z'),
+      date: new Date('2021-03-01T10:00:00.000Z'),
       toAsset: 'BTC',
       toAmount: bn('0.5'),
       fiatCurrency: 'DKK',

@@ -34,7 +34,7 @@ describe('LedgerImporter', () => {
 
   it('parses an IN operation as a transfer', () => {
     const input = csv(
-      makeRow('2024-01-15T10:30:00.000Z', 'BTC', 'IN', '0.5', '0'),
+      makeRow('2021-03-01T10:00:00.000Z', 'BTC', 'IN', '0.5', '0'),
     );
     const txs = importer.parse(input);
 
@@ -42,13 +42,13 @@ describe('LedgerImporter', () => {
     expect(txs[0].type).toBe('transfer');
     expect(txs[0].toAsset).toBe('BTC');
     expect(txs[0].toAmount!.isEqualTo(bn('0.5'))).toBe(true);
-    expect(txs[0].date).toEqual(new Date('2024-01-15T10:30:00.000Z'));
+    expect(txs[0].date).toEqual(new Date('2021-03-01T10:00:00.000Z'));
     expect(txs[0].exchange).toBe('Ledger');
   });
 
   it('parses an OUT operation as a transfer', () => {
     const input = csv(
-      makeRow('2024-02-01T08:00:00.000Z', 'ETH', 'OUT', '-1.2', '0.001'),
+      makeRow('2021-04-15T08:00:00.000Z', 'ETH', 'OUT', '-1.2', '0.001'),
     );
     const txs = importer.parse(input);
 
@@ -62,7 +62,7 @@ describe('LedgerImporter', () => {
 
   it('parses a FEES operation as a fee', () => {
     const input = csv(
-      makeRow('2024-03-10T12:00:00.000Z', 'BTC', 'FEES', '-0.00012', '0.00012'),
+      makeRow('2021-06-01T12:00:00.000Z', 'BTC', 'FEES', '-0.00012', '0.00012'),
     );
     const txs = importer.parse(input);
 
@@ -74,8 +74,8 @@ describe('LedgerImporter', () => {
 
   it('assigns unique ids based on tx hash', () => {
     const input = csv(
-      makeRow('2024-01-15T10:30:00.000Z', 'BTC', 'IN', '0.5', '0', 'hash1'),
-      makeRow('2024-01-16T10:30:00.000Z', 'BTC', 'IN', '0.3', '0', 'hash2'),
+      makeRow('2021-03-01T10:00:00.000Z', 'BTC', 'IN', '0.5', '0', 'hash1'),
+      makeRow('2021-03-02T10:00:00.000Z', 'BTC', 'IN', '0.3', '0', 'hash2'),
     );
     const txs = importer.parse(input);
 
@@ -85,7 +85,7 @@ describe('LedgerImporter', () => {
 
   it('leaves fiatValue undefined when countervalue is zero', () => {
     const input = csv(
-      makeRow('2024-01-15T10:30:00.000Z', 'BTC', 'IN', '0.5', '0'),
+      makeRow('2021-03-01T10:00:00.000Z', 'BTC', 'IN', '0.5', '0'),
     );
     const txs = importer.parse(input);
 
@@ -95,7 +95,7 @@ describe('LedgerImporter', () => {
 
   it('parses countervalue when present', () => {
     const input = csv(
-      makeRow('2024-01-15T10:30:00.000Z', 'BTC', 'IN', '0.5', '0', 'abc123', 'Confirmed', 'My Bitcoin', 'xpub6...', 'DKK', '11839.38', '11200.70'),
+      makeRow('2021-03-01T10:00:00.000Z', 'BTC', 'IN', '0.5', '0', 'abc123', 'Confirmed', 'My Bitcoin', 'xpub6...', 'DKK', '11839.38', '11200.70'),
     );
     const txs = importer.parse(input);
 
@@ -111,9 +111,9 @@ describe('LedgerImporter', () => {
 
   it('handles multiple rows', () => {
     const input = csv(
-      makeRow('2024-01-15T10:30:00.000Z', 'BTC', 'IN', '0.5', '0', 'h1'),
-      makeRow('2024-01-16T08:00:00.000Z', 'ETH', 'OUT', '-2.0', '0.005', 'h2'),
-      makeRow('2024-01-17T12:00:00.000Z', 'BTC', 'FEES', '-0.0001', '0.0001', 'h3'),
+      makeRow('2021-03-01T10:00:00.000Z', 'BTC', 'IN', '0.5', '0', 'h1'),
+      makeRow('2021-03-02T08:00:00.000Z', 'ETH', 'OUT', '-2.0', '0.005', 'h2'),
+      makeRow('2021-03-03T12:00:00.000Z', 'BTC', 'FEES', '-0.0001', '0.0001', 'h3'),
     );
     const txs = importer.parse(input);
 
@@ -124,7 +124,7 @@ describe('LedgerImporter', () => {
   });
 
   it('skips empty lines and whitespace-only lines', () => {
-    const input = [HEADER, '', '  ', makeRow('2024-01-15T10:30:00.000Z', 'BTC', 'IN', '0.5', '0')].join('\n');
+    const input = [HEADER, '', '  ', makeRow('2021-03-01T10:00:00.000Z', 'BTC', 'IN', '0.5', '0')].join('\n');
     const txs = importer.parse(input);
 
     expect(txs).toHaveLength(1);
@@ -132,7 +132,7 @@ describe('LedgerImporter', () => {
 
   it('handles NFT_IN as a transfer', () => {
     const input = csv(
-      makeRow('2024-04-01T00:00:00.000Z', 'ETH', 'NFT_IN', '1', '0'),
+      makeRow('2021-07-01T00:00:00.000Z', 'ETH', 'NFT_IN', '1', '0'),
     );
     const txs = importer.parse(input);
 
@@ -152,7 +152,7 @@ describe('LedgerImporter', () => {
 
   it('stores the tx hash in notes', () => {
     const input = csv(
-      makeRow('2024-01-15T10:30:00.000Z', 'BTC', 'IN', '0.5', '0', 'abc123def'),
+      makeRow('2021-03-01T10:00:00.000Z', 'BTC', 'IN', '0.5', '0', 'abc123def'),
     );
     const txs = importer.parse(input);
 
