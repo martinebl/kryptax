@@ -10,7 +10,7 @@
   import ResultsPage from '$lib/components/ResultsPage.svelte'
   import TestResultsPage from '$lib/components/TestResultsPage.svelte'
 
-  const pricesByAsset = loadCsvPrices();
+  let pricesByAsset = $state(loadCsvPrices());
 
   setCryptoConverter(createLayeredCryptoToFiatConverter([
     createCsvCryptoToFiatConverter(pricesByAsset, createFrankfurterFiatConverter()),

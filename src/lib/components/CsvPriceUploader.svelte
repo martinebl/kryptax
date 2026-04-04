@@ -16,6 +16,8 @@
     'AUD', 'CAD', 'HKD', 'SGD', 'PLN', 'CZK', 'HUF',
   ];
 
+  interface LoadedEntry { coinId: string; count: number; currency: string; }
+
   // --- state ---
   let csvText = $state('');
   let headers = $state<string[]>([]);
@@ -27,6 +29,13 @@
   let fileName = $state('');
   let successMessage = $state('');
   let error = $state('');
+  let loadedEntries = $state<LoadedEntry[]>(
+    [...pricesByAsset.entries()].map(([coinId, data]) => ({
+      coinId,
+      count: data.prices.size,
+      currency: data.currency,
+    }))
+  );
 
   const handleFile = async (file: File) => {
     successMessage = '';
@@ -83,6 +92,7 @@
 
     const coinId = resolveCoinId(asset.trim());
     pricesByAsset.set(coinId, { prices, currency });
+    loadedEntries = [...loadedEntries.filter(e => e.coinId !== coinId), { coinId, count: prices.size, currency }];
     successMessage = `Loaded ${prices.size} dates for ${asset.toUpperCase()} (${coinId}) in ${currency}.`;
 
     // Reset file state so another file can be loaded
@@ -220,5 +230,19 @@
 
   {#if successMessage}
     <p class="mt-3 text-xs text-green-600">{successMessage}</p>
+  {/if}
+
+  {#if loadedEntries.length > 0}
+    <div class="mt-4 border-t border-border pt-3">
+      <p class="mb-2 text-xs font-medium text-text-heading">Loaded price data</p>
+      <ul class="space-y-1">
+        {#each loadedEntries as entry}
+          <li class="flex items-center justify-between text-xs text-text">
+            <span class="font-medium text-text-heading capitalize">{entry.coinId}</span>
+            <span>{entry.count} prices · {entry.currency}</span>
+          </li>
+        {/each}
+      </ul>
+    </div>
   {/if}
 </div>

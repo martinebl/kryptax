@@ -24,7 +24,7 @@ const STABLECOINS = new Set([
 
 /** Price data for a single asset: a date→price map plus the currency those prices are in */
 export interface PriceData {
-  prices: Map<string, number>;
+  prices: Map<string, BigNumber>;
   currency: string;
 }
 
@@ -36,7 +36,7 @@ export type PricesByAsset = Map<string, PriceData>;
  */
 const MAX_LOOKBACK_DAYS = 0;
 
-const lookupPrice = (prices: Map<string, number>, dateKey: string): number | undefined => {
+const lookupPrice = (prices: Map<string, BigNumber>, dateKey: string): BigNumber | undefined => {
   if (prices.has(dateKey)) return prices.get(dateKey);
 
   const [year, month, day] = dateKey.split('-').map(Number);
@@ -88,11 +88,11 @@ export const createCsvCryptoToFiatConverter = (
     const targetCurrency = fiatCurrency.toUpperCase();
 
     if (targetCurrency === priceCurrency) {
-      return new BigNumber(rawPrice);
+      return rawPrice;
     }
 
     const fiatRate = await fiatConverter.getRate(priceCurrency, targetCurrency, datetime);
-    return new BigNumber(rawPrice).times(fiatRate);
+    return rawPrice.times(fiatRate);
   },
 });
 

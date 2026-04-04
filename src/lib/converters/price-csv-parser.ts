@@ -1,4 +1,5 @@
 import Papa from 'papaparse';
+import BigNumber from 'bignumber.js';
 
 /** Which columns to read from the CSV */
 export interface ColumnMapping {
@@ -82,27 +83,27 @@ const parseDateKey = (raw: string): string | null => {
   return null;
 };
 
-/** Strip thousand-separator commas and parse as float */
-const parsePrice = (raw: string): number => parseFloat(raw.replace(/,/g, ''));
+/** Strip thousand-separator commas and parse as BigNumber */
+const parsePrice = (raw: string): BigNumber => new BigNumber(raw.replace(/,/g, ''));
 
 /**
  * Parse a price CSV into a Map of YYYY-MM-DD → price.
  * If `mapping` is omitted, columns are auto-detected from the header row.
  */
-export const parsePriceCSV = (csv: string, mapping?: ColumnMapping): Map<string, number> => {
+export const parsePriceCSV = (csv: string, mapping?: ColumnMapping): Map<string, BigNumber> => {
   const { data } = Papa.parse<string[]>(csv.trim(), { skipEmptyLines: 'greedy' });
   if (data.length === 0) return new Map();
 
   const headers = data[0] as string[];
   const resolved = mapping ?? detectColumns(headers).mapping;
-  const result = new Map<string, number>();
+  const result = new Map<string, BigNumber>();
 
   for (const row of data.slice(1)) {
     if (row.length < Math.max(resolved.dateCol, resolved.priceCol) + 1) continue;
     const dateKey = parseDateKey(row[resolved.dateCol]);
     if (!dateKey) continue;
     const price = parsePrice(row[resolved.priceCol]);
-    if (!isNaN(price)) result.set(dateKey, price);
+    if (!price.isNaN()) result.set(dateKey, price);
   }
 
   return result;

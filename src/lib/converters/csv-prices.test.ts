@@ -99,33 +99,33 @@ describe('detectColumns', () => {
 describe('parsePriceCSV date formats', () => {
   it('parses Yahoo Finance "Mon DD, YYYY" format', () => {
     const prices = parsePriceCSV(YAHOO_CSV);
-    expect(prices.get('2026-04-01')).toBeCloseTo(68675.74);
-    expect(prices.get('2026-03-31')).toBeCloseTo(68233.31);
+    expect(prices.get('2026-04-01')?.toNumber()).toBeCloseTo(68675.74);
+    expect(prices.get('2026-03-31')?.toNumber()).toBeCloseTo(68233.31);
   });
 
   it('parses ISO YYYY-MM-DD format', () => {
     const prices = parsePriceCSV(ISO_CSV);
-    expect(prices.get('2026-04-01')).toBeCloseTo(68675.74);
-    expect(prices.get('2026-03-31')).toBeCloseTo(68233.31);
+    expect(prices.get('2026-04-01')?.toNumber()).toBeCloseTo(68675.74);
+    expect(prices.get('2026-03-31')?.toNumber()).toBeCloseTo(68233.31);
   });
 
   it('parses YYYY/MM/DD format', () => {
     const prices = parsePriceCSV(SLASH_CSV);
-    expect(prices.get('2026-04-01')).toBeCloseTo(68675.74);
-    expect(prices.get('2026-03-31')).toBeCloseTo(68233.31);
+    expect(prices.get('2026-04-01')?.toNumber()).toBeCloseTo(68675.74);
+    expect(prices.get('2026-03-31')?.toNumber()).toBeCloseTo(68233.31);
   });
 
   it('parses US MM/DD/YYYY format', () => {
     const prices = parsePriceCSV(US_DATE_CSV);
-    expect(prices.get('2026-04-01')).toBeCloseTo(68675.74);
-    expect(prices.get('2026-03-31')).toBeCloseTo(68233.31);
+    expect(prices.get('2026-04-01')?.toNumber()).toBeCloseTo(68675.74);
+    expect(prices.get('2026-03-31')?.toNumber()).toBeCloseTo(68233.31);
   });
 
   it('skips rows with unparseable dates', () => {
     const csv = 'Date,Price\nnot-a-date,100\n2026-04-01,200';
     const prices = parsePriceCSV(csv);
     expect(prices.size).toBe(1);
-    expect(prices.get('2026-04-01')).toBeCloseTo(200);
+    expect(prices.get('2026-04-01')?.toNumber()).toBeCloseTo(200);
   });
 });
 
@@ -136,18 +136,18 @@ describe('parsePriceCSV date formats', () => {
 describe('parsePriceCSV column mapping', () => {
   it('auto-detects columns from headers', () => {
     const prices = parsePriceCSV(YAHOO_CSV);
-    expect(prices.get('2026-04-01')).toBeCloseTo(68675.74);
+    expect(prices.get('2026-04-01')?.toNumber()).toBeCloseTo(68675.74);
   });
 
   it('uses explicit column mapping when provided', () => {
     // SLASH_CSV has Date in col 0, Price in col 1
     const prices = parsePriceCSV(SLASH_CSV, { dateCol: 0, priceCol: 1 });
-    expect(prices.get('2026-04-01')).toBeCloseTo(68675.74);
+    expect(prices.get('2026-04-01')?.toNumber()).toBeCloseTo(68675.74);
   });
 
   it('handles prices with comma thousand-separators', () => {
     const prices = parsePriceCSV(YAHOO_CSV);
-    expect(prices.get('2026-04-01')).toBeCloseTo(68675.74);
+    expect(prices.get('2026-04-01')?.toNumber()).toBeCloseTo(68675.74);
   });
 
   it('returns an empty map for a header-only CSV', () => {
@@ -253,7 +253,7 @@ describe('createCsvCryptoToFiatConverter', () => {
     ]);
     const converter = createCsvCryptoToFiatConverter(mutableMap, mockFiat);
 
-    const ethPrices = new Map([['2026-04-01', 3000]]);
+    const ethPrices = new Map([['2026-04-01', new BigNumber(3000)]]);
     mutableMap.set('ethereum', { prices: ethPrices, currency: 'USD' });
 
     const rate = await converter.getRate('ETH', 'USD', new Date('2026-04-01'));
