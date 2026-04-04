@@ -1,9 +1,21 @@
 import type { Transaction } from '$lib/types/transaction';
 import type { ICryptoToFiatConverter } from '$lib/types/converters';
 import type BigNumber from 'bignumber.js';
+import { resolvePriorityAsset } from '$lib/engine/asset-priority';
 
-const resolveAssetAndAmount = (tx: Transaction): { asset: string; amount: BigNumber } | undefined => {
-  // For sells/trades/fees, the fiat value represents the proceeds (what you gave up)
+const resolveAssetAndAmount = (tx: Transaction, priorityList?: string[]): { asset: string; amount: BigNumber } | undefined => {
+  // For trades with both sides, use priority list to determine which asset's rate to look up
+  if (tx.fromAsset && tx.fromAmount && tx.toAsset && tx.toAmount) {
+    const priority = resolvePriorityAsset(tx.fromAsset, tx.toAsset, priorityList);
+    if (priority) {
+      return priority.prioritySide === 'from'
+        ? { asset: tx.fromAsset, amount: tx.fromAmount }
+        : { asset: tx.toAsset, amount: tx.toAmount };
+    }
+    // Fall back to fromAsset (proceeds) when neither asset is on the priority list
+    return { asset: tx.fromAsset, amount: tx.fromAmount };
+  }
+  // For sells/fees, the fiat value represents the proceeds (what you gave up)
   if (tx.fromAsset && tx.fromAmount) return { asset: tx.fromAsset, amount: tx.fromAmount };
   // For buys/income, the fiat value represents what you received
   if (tx.toAsset && tx.toAmount) return { asset: tx.toAsset, amount: tx.toAmount };
@@ -35,6 +47,7 @@ export const enrichFiatValues = async (
   converter: ICryptoToFiatConverter,
   fiatCurrency: string,
   onProgress?: (progress: EnrichmentProgress) => void,
+  priorityList?: string[],
 ): Promise<EnrichmentResult> => {
   const total = transactions.length;
   const results: Transaction[] = [];
@@ -49,7 +62,7 @@ export const enrichFiatValues = async (
       continue;
     }
 
-    const resolved = resolveAssetAndAmount(tx);
+    const resolved = resolveAssetAndAmount(tx, priorityList);
     if (!resolved) {
       results.push(tx);
       onProgress?.({ completed: i + 1, total, failed });

@@ -1,5 +1,6 @@
 <script lang="ts">
   import type { Transaction } from '$lib/types';
+  import type { TaxRules } from '$lib/types/tax-rules';
   import { setCryptoConverter } from '$lib/context';
   import { createCoinGeckoCryptoToFiatConverter } from '$lib/converters/coingecko';
   import { createCsvCryptoToFiatConverter, loadCsvPrices } from '$lib/converters/csv-prices';
@@ -9,6 +10,9 @@
   import ImportPage from '$lib/components/ImportPage.svelte'
   import ResultsPage from '$lib/components/ResultsPage.svelte'
   import TestResultsPage from '$lib/components/TestResultsPage.svelte'
+  import dkRules from '$lib/rules/dk/dk-2024.json';
+
+  const taxRules: TaxRules = dkRules as TaxRules;
 
   let pricesByAsset = $state(loadCsvPrices());
 
@@ -79,7 +83,7 @@
     {#if currentPage === 'home'}
       <LandingPage onNavigate={navigate} />
     {:else if currentPage === 'import'}
-      <ImportPage onImport={handleImport} {pricesByAsset} />
+      <ImportPage onImport={handleImport} {pricesByAsset} {taxRules} />
     {:else if currentPage === 'results'}
       <ResultsPage {transactions} />
     {:else if currentPage === 'test-results'}

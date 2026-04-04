@@ -1,5 +1,6 @@
 <script lang="ts">
   import type { Transaction, IExchangeImporter } from '$lib/types';
+  import type { TaxRules } from '$lib/types/tax-rules';
   import { LedgerImporter } from '$lib/importers/ledger';
   import { BinanceImporter } from '$lib/importers/binance';
   import { RevolutXImporter } from '$lib/importers/revolut-x';
@@ -12,9 +13,10 @@
   interface Props {
     onImport: (transactions: Transaction[]) => void;
     pricesByAsset: PricesByAsset;
+    taxRules: TaxRules;
   }
 
-  const { onImport, pricesByAsset }: Props = $props();
+  const { onImport, pricesByAsset, taxRules }: Props = $props();
 
   const importers: IExchangeImporter[] = [
     new LedgerImporter(),
@@ -108,11 +110,11 @@
     enrichTotal = preprocessed.length;
     enrichFailed = 0;
 
-    const result = await enrichFiatValues(preprocessed, converter, 'DKK', (progress) => {
+    const result = await enrichFiatValues(preprocessed, converter, taxRules.currency, (progress) => {
       enrichProgress = progress.completed;
       enrichTotal = progress.total;
       enrichFailed = progress.failed;
-    });
+    }, taxRules.assetPriorityList);
 
     enriching = false;
     enrichFailed = result.failed;
