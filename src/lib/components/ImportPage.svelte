@@ -114,7 +114,7 @@
       enrichProgress = progress.completed;
       enrichTotal = progress.total;
       enrichFailed = progress.failed;
-    }, taxRules.assetPriorityList);
+    });
 
     enriching = false;
     enrichFailed = result.failed;

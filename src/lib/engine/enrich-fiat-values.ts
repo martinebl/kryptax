@@ -3,10 +3,10 @@ import type { ICryptoToFiatConverter } from '$lib/types/converters';
 import type BigNumber from 'bignumber.js';
 import { resolvePriorityAsset } from '$lib/engine/asset-priority';
 
-const resolveAssetAndAmount = (tx: Transaction, priorityList?: string[]): { asset: string; amount: BigNumber } | undefined => {
+const resolveAssetAndAmount = (tx: Transaction): { asset: string; amount: BigNumber } | undefined => {
   // For trades with both sides, use priority list to determine which asset's rate to look up
   if (tx.fromAsset && tx.fromAmount && tx.toAsset && tx.toAmount) {
-    const priority = resolvePriorityAsset(tx.fromAsset, tx.toAsset, priorityList);
+    const priority = resolvePriorityAsset(tx.fromAsset, tx.toAsset);
     if (priority) {
       return priority.prioritySide === 'from'
         ? { asset: tx.fromAsset, amount: tx.fromAmount }
@@ -47,7 +47,6 @@ export const enrichFiatValues = async (
   converter: ICryptoToFiatConverter,
   fiatCurrency: string,
   onProgress?: (progress: EnrichmentProgress) => void,
-  priorityList?: string[],
 ): Promise<EnrichmentResult> => {
   const total = transactions.length;
   const results: Transaction[] = [];
@@ -62,7 +61,7 @@ export const enrichFiatValues = async (
       continue;
     }
 
-    const resolved = resolveAssetAndAmount(tx, priorityList);
+    const resolved = resolveAssetAndAmount(tx);
     if (!resolved) {
       results.push(tx);
       onProgress?.({ completed: i + 1, total, failed });
