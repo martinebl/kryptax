@@ -58,7 +58,7 @@
       {rules.currency} · {rules.costBasis.default.toUpperCase()} method · {transactions.length} transactions
     </p>
 
-    <!-- Summary cards -->
+
     <div class="mb-10 grid grid-cols-3 gap-4 max-md:grid-cols-1">
       <Card title="Capital Gains">
         <div class="space-y-2">
@@ -108,7 +108,7 @@
       </Card>
     </div>
 
-    <!-- Gains vs losses bar -->
+
     {#if summary.totalGains.gt(0) || summary.totalLosses.gt(0)}
       {@const total = summary.totalGains.plus(summary.totalLosses)}
       {@const gainPct = total.gt(0) ? summary.totalGains.div(total).times(100).toNumber() : 0}
@@ -124,7 +124,7 @@
       </div>
     {/if}
 
-    <!-- Current holdings table -->
+
     {#if holdings.length > 0}
       <HoldingsTable
         {visibleHoldings}
@@ -135,18 +135,16 @@
       />
     {/if}
 
-    <!-- Simulate full sell -->
+
     {#if visibleHoldings.length > 0}
       <SimulationPanel {transactions} holdings={visibleHoldings} {summary} {rules} />
     {/if}
 
-    <!-- Tax events table -->
     {#if summary.events.length > 0}
       <TaxEventsTable events={summary.events} />
     {/if}
 
-    <!-- All activity table -->
-     <ActivitiesTable transactions={transactions} />
+    <ActivitiesTable transactions={transactions} />
     
   {/if}
 </section>

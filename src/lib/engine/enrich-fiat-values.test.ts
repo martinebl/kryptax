@@ -141,9 +141,8 @@ describe('enrichFiatValues', () => {
       toAmount: bn('0.1'),
     })];
 
-    // BTC is on the default priority list, SMALLCOIN is not — so BTC's rate × toAmount should be used
     const result = await enrichFiatValues(txs, mockConverter, 'DKK');
 
-    expect(result.transactions[0].fiatValue!.isEqualTo(bn('6000'))).toBe(true); // 0.1 BTC × 60000
+    expect(result.transactions[0].fiatValue!.isEqualTo(bn('6000'))).toBe(true);
   });
 });

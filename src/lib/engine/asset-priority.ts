@@ -3,9 +3,7 @@ export interface PriorityAssetResult {
   readonly prioritySide: 'from' | 'to';
 }
 
-/** Default asset priority list, ordered by liquidity/market cap.
- *  Used to determine which side of a crypto-to-crypto trade has the most
- *  reliable fiat pricing data. Lower index = higher priority. */
+/** Lower index = higher priority. */
 export const DEFAULT_ASSET_PRIORITY_LIST: readonly string[] = [
   'USDT', 'USDC', 'BUSD',
   'BTC', 'ETH', 'BNB', 'XRP', 'LUNA', 'ADA', 'SOL', 'AVAX', 'DOT', 'DOGE',
@@ -122,9 +120,6 @@ export const DEFAULT_ASSET_PRIORITY_LIST: readonly string[] = [
 const buildPriorityMap = (list: readonly string[]): Map<string, number> =>
   new Map(list.map((symbol, index) => [symbol.toUpperCase(), index]));
 
-/** Given two assets in a trade, determine which asset's exchange rate should
- *  be used based on a priority list (defaults to the built-in list).
- *  Returns `null` when neither asset appears on the list. */
 export const resolvePriorityAsset = (
   fromAsset: string,
   toAsset: string,
