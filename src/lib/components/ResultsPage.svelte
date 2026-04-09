@@ -9,21 +9,19 @@
   import type { Transaction } from '$lib/types/transaction';
   import type { TaxRules } from '$lib/types/tax-rules';
   import { filterDustHoldings } from '$lib/engine/dust-filter';
-  import dkRules from '$lib/rules/dk/dk-2024.json';
-    import ActivitiesTable from './ActivitiesTable.svelte';
+  import ActivitiesTable from './ActivitiesTable.svelte';
 
   interface Props {
     transactions: Transaction[];
+    taxRules: TaxRules;
   }
 
-  const { transactions }: Props = $props();
-
-  const rules = dkRules as TaxRules;
+  const { transactions, taxRules }: Props = $props();
   const fmt = (v: BigNumber) => v.toFormat(2);
 
   const { summary, holdings } = $derived.by(() => {
-    const tracker = new LotTracker(rules.costBasis.default);
-    const calculator = new TaxCalculator(rules, tracker);
+    const tracker = new LotTracker(taxRules.costBasis.default);
+    const calculator = new TaxCalculator(taxRules, tracker);
     const summary = calculator.process(transactions);
     const holdings = tracker.getHoldings().filter((h) => h.totalAmount.gt(0));
     return { summary, holdings };
@@ -52,10 +50,10 @@
     </div>
   {:else}
     <h2 class="mb-2 text-center font-heading text-2xl font-medium text-text-heading">
-      Tax Report — {rules.country} {rules.taxYear}
+      Tax Report — {taxRules.country} {taxRules.taxYear}
     </h2>
     <p class="mx-auto mb-10 max-w-lg text-center text-sm text-text">
-      {rules.currency} · {rules.costBasis.default.toUpperCase()} method · {transactions.length} transactions
+      {taxRules.currency} · {taxRules.costBasis.default.toUpperCase()} method · {transactions.length} transactions
     </p>
 
 
@@ -103,7 +101,7 @@
           <p class="text-center font-mono text-3xl font-semibold {gainColor(summary.estimatedTax.negated())}">
             {fmt(summary.estimatedTax)}
           </p>
-          <p class="mt-1 text-center text-xs text-text">{rules.currency}</p>
+          <p class="mt-1 text-center text-xs text-text">{taxRules.currency}</p>
         </div>
       </Card>
     </div>
@@ -131,13 +129,13 @@
         {dustHoldings}
         bind:hideDust
         bind:dustThresholdInput
-        currency={rules.currency}
+        currency={taxRules.currency}
       />
     {/if}
 
 
     {#if visibleHoldings.length > 0}
-      <SimulationPanel {transactions} holdings={visibleHoldings} {summary} {rules} />
+      <SimulationPanel {transactions} holdings={visibleHoldings} {summary} rules={taxRules} />
     {/if}
 
     {#if summary.events.length > 0}

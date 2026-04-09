@@ -56,7 +56,23 @@ export const enrichFiatValues = async (
     const tx = transactions[i];
 
     if (tx.fiatValue !== undefined) {
-      results.push(tx);
+      const sourceCurrency = tx.fiatCurrency?.toUpperCase();
+      const targetCurrency = fiatCurrency.toUpperCase();
+
+      if (!sourceCurrency || sourceCurrency === targetCurrency) {
+        results.push(tx);
+        onProgress?.({ completed: i + 1, total, failed });
+        continue;
+      }
+
+      // fiatValue exists but in a different currency — convert to the target
+      try {
+        const rate = await converter.getRate(sourceCurrency, targetCurrency, tx.date);
+        results.push({ ...tx, fiatCurrency, fiatValue: tx.fiatValue.times(rate) });
+      } catch {
+        results.push(tx);
+        failed++;
+      }
       onProgress?.({ completed: i + 1, total, failed });
       continue;
     }
