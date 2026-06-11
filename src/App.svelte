@@ -12,7 +12,7 @@
   import TestResultsPage from '$lib/components/TestResultsPage.svelte'
   import CoinDisambiguator from '$lib/components/CoinDisambiguator.svelte'
   import { availableCountries, findCountry } from '$lib/rules';
-  import { createLocalStorageStorage, createPriceRepository } from '$lib/storage';
+  import { createLocalStorageStorage, createPriceRepository, createTransactionRepository } from '$lib/storage';
   import logoUrl from '/kryptax.png'
 
   const storage = createLocalStorageStorage();
@@ -32,6 +32,7 @@
       );
       if (!ok) return;
       transactions = [];
+      txRepo.clear().catch((e) => console.error('Failed to clear stored transactions', e));
     }
 
     countryConfig = found;
@@ -55,6 +56,12 @@
   let currentPage = $state('home');
   let transactions = $state<Transaction[]>([]);
   let pendingTransactions = $state<Transaction[]>([]);
+
+  const txRepo = createTransactionRepository(storage);
+  // An import that beats this load already holds the full store via merge()
+  txRepo.load().then((stored) => {
+    if (transactions.length === 0) transactions = stored;
+  }).catch((e) => console.error('Failed to load stored transactions', e));
   let ambiguousCoins = $state<Record<string, CoinListEntry[]>>({});
 
   const navigate = (page: string) => {
@@ -74,16 +81,23 @@
     pendingTransactions = imported;
     ambiguousCoins = ambiguous;
 
-    transactions = [...transactions, ...imported];
+    transactions = await txRepo.merge(imported);
     pendingTransactions = [];
   };
 
-  const handleDisambiguate = (resolutions: Record<string, string>) => {
+  const handleDisambiguate = async (resolutions: Record<string, string>) => {
     setUserResolutions(resolutions);
-    transactions = [...transactions, ...pendingTransactions];
+    transactions = await txRepo.merge(pendingTransactions);
     pendingTransactions = [];
     ambiguousCoins = {};
     navigate('results');
+  };
+
+  const clearTransactions = () => {
+    const ok = confirm('This will remove all imported transactions stored in your browser. Continue?');
+    if (!ok) return;
+    transactions = [];
+    txRepo.clear().catch((e) => console.error('Failed to clear stored transactions', e));
   };
 </script>
 
@@ -141,7 +155,13 @@
     {#if currentPage === 'home'}
       <LandingPage onNavigate={navigate} {availableCountries} selectedCountry={countryConfig} onSelectCountry={selectCountry} />
     {:else if currentPage === 'import' && countryConfig}
-      <ImportPage onImport={handleImport} {pricesByAsset} {countryConfig} />
+      <ImportPage
+        onImport={handleImport}
+        {pricesByAsset}
+        {countryConfig}
+        storedTransactionCount={transactions.length}
+        onClearHistory={clearTransactions}
+      />
     {:else if currentPage === 'results' && countryConfig}
       <ResultsPage {transactions} {countryConfig} />
     {:else if currentPage === 'test-results'}
