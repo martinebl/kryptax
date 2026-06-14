@@ -58,8 +58,6 @@ async fn signed_get(path: &str, params: &[(&str, String)]) -> Result<Value, Stri
         format!("{BASE_URL}{full_path}?{query}")
     };
 
-    log::info!("revolut_x GET {url}");
-
     let client = reqwest::Client::new();
     let response = client
         .get(&url)
@@ -76,9 +74,6 @@ async fn signed_get(path: &str, params: &[(&str, String)]) -> Result<Value, Stri
         .text()
         .await
         .map_err(|e| format!("read body: {e}"))?;
-
-    let preview: String = body.chars().take(500).collect();
-    log::info!("revolut_x {full_path} -> {} {preview}", status.as_u16());
 
     if !status.is_success() {
         return Err(format!(
@@ -107,21 +102,19 @@ pub async fn revolut_x_fetch_pairs() -> Result<Value, String> {
 #[tauri::command]
 pub async fn revolut_x_fetch_trades(
     symbol: String,
-    start_ms: Option<i64>,
-    end_ms: Option<i64>,
+    start_ms: i64,
+    end_ms: i64,
 ) -> Result<Value, String> {
     let path = format!("/trades/private/{symbol}");
     let mut all_trades: Vec<Value> = Vec::new();
     let mut cursor: Option<String> = None;
 
     loop {
-        let mut params: Vec<(&str, String)> = vec![("limit", TRADES_PAGE_LIMIT.to_string())];
-        if let Some(start) = start_ms {
-            params.push(("start_date", start.to_string()));
-        }
-        if let Some(end) = end_ms {
-            params.push(("end_date", end.to_string()));
-        }
+        let mut params: Vec<(&str, String)> = vec![
+            ("limit", TRADES_PAGE_LIMIT.to_string()),
+            ("start_date", start_ms.to_string()),
+            ("end_date", end_ms.to_string()),
+        ];
         if let Some(ref c) = cursor {
             params.push(("cursor", c.clone()));
         }
@@ -151,21 +144,15 @@ pub async fn revolut_x_fetch_trades(
 /// pagination until exhausted. Returns the flat array of order objects; the
 /// frontend keeps the ones that actually executed (filled_quantity > 0).
 #[tauri::command]
-pub async fn revolut_x_fetch_orders(
-    start_ms: Option<i64>,
-    end_ms: Option<i64>,
-) -> Result<Value, String> {
+pub async fn revolut_x_fetch_orders(start_ms: i64, end_ms: i64) -> Result<Value, String> {
     let mut all_orders: Vec<Value> = Vec::new();
     let mut cursor: Option<String> = None;
 
     loop {
-        let mut params: Vec<(&str, String)> = Vec::new();
-        if let Some(start) = start_ms {
-            params.push(("start_date", start.to_string()));
-        }
-        if let Some(end) = end_ms {
-            params.push(("end_date", end.to_string()));
-        }
+        let mut params: Vec<(&str, String)> = vec![
+            ("start_date", start_ms.to_string()),
+            ("end_date", end_ms.to_string()),
+        ];
         if let Some(ref c) = cursor {
             params.push(("cursor", c.clone()));
         }

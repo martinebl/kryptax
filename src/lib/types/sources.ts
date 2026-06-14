@@ -8,6 +8,12 @@ export interface LiveSourceFetchParams {
   to?: Date;
   /** Optional pair symbols, used by exchanges that require pair-by-pair queries (e.g. Binance). */
   symbols?: string[];
+  /**
+   * Called as fetching progresses, for sources that fan out into many requests
+   * (e.g. Revolut X chunks a wide range into ≤30-day windows). `completed` counts
+   * finished requests out of `total`.
+   */
+  onProgress?: (progress: { completed: number; total: number }) => void;
 }
 
 /**
@@ -30,6 +36,13 @@ export interface ILiveSource {
    * the UI hides the symbols input.
    */
   readonly requiresSymbols?: boolean;
+
+  /**
+   * Whether the user must supply a bounded date range to fetch. Defaults to false.
+   * Sources whose API only serves bounded windows (e.g. Revolut X, ≤30 days per
+   * query) set this true so the UI requires both dates.
+   */
+  readonly requiresDateRange?: boolean;
 
   /** Placeholder for the pair-symbols input (exchanges format symbols differently). */
   readonly symbolPlaceholder?: string;

@@ -11,7 +11,10 @@ vi.mock('$lib/runtime', () => ({
   isTauri: () => true,
 }));
 
-import { RevolutXLiveSource } from '$lib/sources/revolut-x-live';
+import { RevolutXLiveSource, dateChunks } from '$lib/sources/revolut-x-live';
+
+const DAY_MS = 24 * 60 * 60 * 1000;
+const CHUNK_MS = 29 * DAY_MS;
 
 interface WireOrder {
   id: string;
@@ -126,6 +129,37 @@ describe('RevolutXLiveSource', () => {
     expect(tx.toAmount?.eq(new BigNumber('0.75'))).toBe(true);
     expect(tx.feeAsset).toBeUndefined();
     expect(tx.exchange).toBe('Revolut X');
+    // Quote is fiat, so the executed value is used directly (no price lookup).
+    expect(tx.fiatCurrency).toBe('EUR');
+    expect(tx.fiatValue?.eq(new BigNumber('1800'))).toBe(true);
+  });
+
+  it('uses the quote leg as the fiat value, mapping stablecoins to USD and leaving crypto quotes unpriced', async () => {
+    setup({
+      orders: [],
+      balances: [{ currency: 'BTC', total: '1' }, { currency: 'ETH', total: '1' }],
+      pairs: {
+        'BTC/USDC': { base: 'BTC', quote: 'USDC', status: 'active' },
+        'ETH/BTC': { base: 'ETH', quote: 'BTC', status: 'active' },
+      },
+      tradesBySymbol: {
+        'BTC-USDC': [makeTrade({ tid: 'stable', s: 'buy', qc: 'BTC', q: '0.02', pc: 'USDC', p: '50000' })],
+        'ETH-BTC': [makeTrade({ tid: 'crypto', s: 'buy', qc: 'ETH', q: '3', pc: 'BTC', p: '0.05' })],
+      },
+    });
+
+    const txs = await new RevolutXLiveSource().fetch({});
+    const byId = Object.fromEntries(txs.map((t) => [t.id, t]));
+
+    // Stablecoin quote → valued 1:1 in USD.
+    const stable = byId['revolut-x-live-trade-stable'];
+    expect(stable.fiatCurrency).toBe('USD');
+    expect(stable.fiatValue?.eq(new BigNumber('1000'))).toBe(true); // 0.02 × 50000
+
+    // Crypto quote → left for rate enrichment.
+    const crypto = byId['revolut-x-live-trade-crypto'];
+    expect(crypto.fiatCurrency).toBeUndefined();
+    expect(crypto.fiatValue).toBeUndefined();
   });
 
   it('maps a sell order with the inflow/outflow swapped', async () => {
@@ -263,6 +297,58 @@ describe('RevolutXLiveSource', () => {
     ]);
   });
 
+  it('chunks a wide range into ≤30-day windows, paces requests, and reports progress', async () => {
+    setup({
+      orders: [],
+      balances: [{ currency: 'BTC', total: '0.5' }],
+      pairs: { 'BTC/USD': { base: 'BTC', quote: 'USD', status: 'active' } },
+      tradesBySymbol: {},
+    });
+
+    const from = new Date(Date.UTC(2024, 0, 1));
+    const to = new Date(Date.UTC(2024, 3, 1)); // ~91 days
+    const expectedChunks = dateChunks(from.getTime(), to.getTime());
+    expect(expectedChunks.length).toBeGreaterThan(1);
+
+    const progress: { completed: number; total: number }[] = [];
+    await new RevolutXLiveSource().fetch({ from, to, onProgress: (p) => progress.push(p) });
+
+    const orderCalls = invokeMock.mock.calls.filter((c) => c[0] === 'revolut_x_fetch_orders');
+    const tradeCalls = invokeMock.mock.calls.filter((c) => c[0] === 'revolut_x_fetch_trades');
+
+    // One orders request per chunk, one trades request per (symbol × chunk).
+    expect(orderCalls).toHaveLength(expectedChunks.length);
+    expect(tradeCalls).toHaveLength(expectedChunks.length); // 1 held symbol
+
+    // Each call carries a concrete numeric window — never null.
+    for (const [, args] of orderCalls) {
+      expect(typeof args.startMs).toBe('number');
+      expect(typeof args.endMs).toBe('number');
+      expect(args.endMs - args.startMs).toBeLessThanOrEqual(CHUNK_MS);
+    }
+
+    // Progress is reported per date period, climbing monotonically to the
+    // number of chunks.
+    const total = expectedChunks.length;
+    expect(progress[progress.length - 1]).toEqual({ completed: total, total });
+    const completedSeq = progress.map((p) => p.completed);
+    expect(completedSeq).toEqual([...completedSeq].sort((a, b) => a - b));
+    expect(progress.every((p) => p.total === total)).toBe(true);
+  });
+
+  it('defaults the end of the window to ~now when "to" is omitted', async () => {
+    setup({ orders: [] });
+
+    const before = Date.now();
+    await new RevolutXLiveSource().fetch({ from: new Date(before - 5 * DAY_MS) });
+    const after = Date.now();
+
+    const [, args] = invokeMock.mock.calls.find((c) => c[0] === 'revolut_x_fetch_orders')!;
+    // Single chunk for a 5-day range; its end is "now".
+    expect(args.endMs).toBeGreaterThanOrEqual(before);
+    expect(args.endMs).toBeLessThanOrEqual(after);
+  });
+
   it('passes credentials through to the Tauri layer', async () => {
     invokeMock.mockResolvedValue(undefined);
     const source = new RevolutXLiveSource();
@@ -280,5 +366,40 @@ describe('RevolutXLiveSource', () => {
     invokeMock.mockResolvedValue(undefined);
     await source.clearCredentials();
     expect(invokeMock).toHaveBeenCalledWith('revolut_x_clear_credentials');
+  });
+});
+
+describe('dateChunks', () => {
+  it('returns a single span when the range is under 30 days', () => {
+    const start = Date.UTC(2025, 5, 1);
+    const end = start + 10 * DAY_MS;
+    expect(dateChunks(start, end)).toEqual([[start, end]]);
+  });
+
+  it('returns a single span when start equals end', () => {
+    const t = Date.UTC(2025, 5, 1);
+    expect(dateChunks(t, t)).toEqual([[t, t]]);
+  });
+
+  it('splits a long range into consecutive, non-overlapping spans that cover it', () => {
+    const start = Date.UTC(2024, 0, 1);
+    const end = start + 90 * DAY_MS;
+    const chunks = dateChunks(start, end);
+
+    expect(chunks.length).toBeGreaterThan(1);
+    // Covers the whole range.
+    expect(chunks[0][0]).toBe(start);
+    expect(chunks[chunks.length - 1][1]).toBe(end);
+    // No span exceeds the cap; spans are consecutive and non-overlapping.
+    chunks.forEach(([s, e], i) => {
+      expect(e - s).toBeLessThanOrEqual(CHUNK_MS);
+      expect(e).toBeGreaterThanOrEqual(s);
+      if (i > 0) expect(s).toBe(chunks[i - 1][1] + 1);
+    });
+  });
+
+  it('returns no spans when end precedes start', () => {
+    const start = Date.UTC(2025, 5, 1);
+    expect(dateChunks(start, start - DAY_MS)).toEqual([]);
   });
 });

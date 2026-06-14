@@ -7,6 +7,7 @@ import type {
   Transaction,
 } from '$lib/types';
 import { isTauri } from '$lib/runtime';
+import { isFiat, isStablecoin } from '$lib/converters/fiat-currencies';
 
 /**
  * A historical order from Revolut X. A market/limit buy or sell is one order;
@@ -64,6 +65,19 @@ const sides = (base: string, quote: string, baseAmount: BigNumber, quoteAmount: 
     : { fromAsset: base, fromAmount: baseAmount, toAsset: quote, toAmount: quoteAmount };
 
 /**
+ * The trade's quote leg already carries the executed fiat value, so use it
+ * directly when the quote is a fiat currency (or a USD-pegged stablecoin,
+ * valued 1:1 in USD). This avoids a CoinGecko price lookup during enrichment;
+ * a quote in another fiat is later converted fiat→fiat to the tax currency.
+ * Crypto-quoted pairs return nothing here and fall back to a rate lookup.
+ */
+const fiatFromQuote = (quote: string, quoteAmount: BigNumber) => {
+  if (isFiat(quote)) return { fiatCurrency: quote.toUpperCase(), fiatValue: quoteAmount };
+  if (isStablecoin(quote)) return { fiatCurrency: 'USD', fiatValue: quoteAmount };
+  return {};
+};
+
+/**
  * Map an executed Revolut X order to a Transaction. The base side is
  * `filled_quantity`; the quote side is `filled_amount` when present, otherwise
  * quantity × (average fill price, falling back to the order price). The orders
@@ -86,6 +100,7 @@ const orderToTransaction = (order: RevolutOrder): Transaction | null => {
     date: new Date(order.updated_date ?? order.created_date),
     type: order.side === 'buy' ? 'buy' : 'sell',
     ...sides(base, quote, filledQty, quoteAmount, order.side === 'buy'),
+    ...fiatFromQuote(quote, quoteAmount),
     exchange: 'Revolut X',
   };
 };
@@ -102,6 +117,7 @@ const tradeToTransaction = (trade: RevolutTrade): Transaction => {
     date: new Date(trade.tdt),
     type: trade.s === 'buy' ? 'buy' : 'sell',
     ...sides(base, quote, quantity, quoteAmount, trade.s === 'buy'),
+    ...fiatFromQuote(quote, quoteAmount),
     exchange: 'Revolut X',
   };
 };
@@ -109,10 +125,39 @@ const tradeToTransaction = (trade: RevolutTrade): Transaction => {
 const withinWindow = (date: Date, from?: Date, to?: Date): boolean =>
   (!from || date >= from) && (!to || date <= to);
 
+/**
+ * Revolut X only serves a window of at most ~30 days per query, so a wider range
+ * must be split. Use a span just under 30 days to stay safely inside the server's
+ * inclusive cap.
+ */
+const CHUNK_MS = 29 * 24 * 60 * 60 * 1000;
+
+/** Delay between sequential requests, to stay clear of rate limits. */
+const REQUEST_DELAY_MS = 75;
+
+const delay = (ms: number): Promise<void> => new Promise((resolve) => setTimeout(resolve, ms));
+
+/**
+ * Split [startMs, endMs] into consecutive, non-overlapping spans of at most
+ * CHUNK_MS each. Each span after the first starts 1ms past the previous end.
+ */
+export const dateChunks = (startMs: number, endMs: number): Array<[number, number]> => {
+  if (endMs < startMs) return [];
+  const chunks: Array<[number, number]> = [];
+  let start = startMs;
+  while (start <= endMs) {
+    const end = Math.min(start + CHUNK_MS, endMs);
+    chunks.push([start, end]);
+    start = end + 1;
+  }
+  return chunks;
+};
+
 export class RevolutXLiveSource implements ILiveSource {
   readonly exchangeName = 'Revolut X';
   readonly preprocessors: IImportPreprocessor[] = [];
   readonly requiresSymbols = false;
+  readonly requiresDateRange = true;
   readonly symbolsNote =
     'Fetches all your Revolut X exchange activity: historical orders plus private trade fills (for assets you currently hold). Trades made in the main Revolut app (not the Revolut X exchange) are not exposed by this API — use a CSV export for those. The API does not report fees.';
   readonly keyLabel = 'API key';
@@ -153,29 +198,66 @@ export class RevolutXLiveSource implements ILiveSource {
   }
 
   async fetch(params: LiveSourceFetchParams): Promise<Transaction[]> {
-    const startMs = params.from ? params.from.getTime() : null;
-    const endMs = params.to ? params.to.getTime() : null;
+    // The API needs a bounded window per request; the UI makes both dates
+    // mandatory, but fall back here to keep the optional type contract sound.
+    const endMs = (params.to ?? new Date()).getTime();
+    const startMs = (params.from ?? new Date(endMs - CHUNK_MS)).getTime();
 
     const symbols = await this.heldPairSymbols();
+    const chunks = dateChunks(startMs, endMs);
 
-    const [orders, tradesPerSymbol] = await Promise.all([
-      invoke<RevolutOrder[]>('revolut_x_fetch_orders', { startMs, endMs }),
-      Promise.all(
-        symbols.map((symbol) =>
-          invoke<RevolutTrade[]>('revolut_x_fetch_trades', { symbol, startMs, endMs }),
-        ),
-      ),
-    ]);
+    // Progress is reported per date period (chunk); within a period we still
+    // issue one orders request + one trades request per symbol, paced to stay
+    // clear of rate limits.
+    const total = chunks.length;
+    const totalRequests = chunks.length * (1 + symbols.length);
+    let completed = 0;
+    let requestsDone = 0;
+    params.onProgress?.({ completed, total });
 
-    const orderTxs = orders
+    const orders: RevolutOrder[] = [];
+    const trades: RevolutTrade[] = [];
+
+    // Pause between requests, but not after the very last one.
+    const paceAfterRequest = async () => {
+      requestsDone += 1;
+      if (requestsDone < totalRequests) await delay(REQUEST_DELAY_MS);
+    };
+
+    for (const [chunkStart, chunkEnd] of chunks) {
+      const page = await invoke<RevolutOrder[]>('revolut_x_fetch_orders', {
+        startMs: chunkStart,
+        endMs: chunkEnd,
+      });
+      orders.push(...page);
+      await paceAfterRequest();
+
+      for (const symbol of symbols) {
+        const fills = await invoke<RevolutTrade[]>('revolut_x_fetch_trades', {
+          symbol,
+          startMs: chunkStart,
+          endMs: chunkEnd,
+        });
+        trades.push(...fills);
+        await paceAfterRequest();
+      }
+
+      completed += 1;
+      params.onProgress?.({ completed, total });
+    }
+
+    // Collapse any records seen in more than one chunk to a single entry.
+    const uniqueOrders = [...new Map(orders.map((o) => [o.id, o])).values()];
+    const uniqueTrades = [...new Map(trades.map((t) => [t.tid, t])).values()];
+
+    const orderTxs = uniqueOrders
       .map(orderToTransaction)
       .filter((tx): tx is Transaction => tx !== null);
 
     // Skip trade fills already represented by a fetched order, so the same
     // execution isn't counted twice.
-    const orderIds = new Set(orders.map((o) => o.id));
-    const tradeTxs = tradesPerSymbol
-      .flat()
+    const orderIds = new Set(uniqueOrders.map((o) => o.id));
+    const tradeTxs = uniqueTrades
       .filter((t) => !orderIds.has(t.oid))
       .map(tradeToTransaction);
 

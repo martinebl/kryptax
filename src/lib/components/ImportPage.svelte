@@ -48,10 +48,13 @@
   let liveCredsKey = $state('');
   let liveCredsSecret = $state('');
   let liveCredsSaved = $state<Record<string, boolean>>({});
+  const today = new Date().toISOString().slice(0, 10);
   let liveSymbols = $state('');
   let liveFromDate = $state('');
-  let liveToDate = $state('');
+  let liveToDate = $state(today);
   let liveFetching = $state(false);
+  let liveFetchProgress = $state(0);
+  let liveFetchTotal = $state(0);
   let liveDiscovering = $state(false);
   let liveError = $state('');
   let liveInfo = $state('');
@@ -178,6 +181,8 @@
     liveFetching = true;
     liveError = '';
     liveInfo = '';
+    liveFetchProgress = 0;
+    liveFetchTotal = 0;
     resetReview();
     try {
       const symbols = liveSymbols
@@ -189,10 +194,21 @@
         liveError = 'No pair symbols to fetch. Enter at least one pair (e.g. BTC-USD) or use Re-detect pairs.';
         return;
       }
+      if (source.requiresDateRange && (!liveFromDate || !liveToDate)) {
+        liveFetching = false;
+        liveError = `Select a start and end date — ${source.exchangeName} only serves bounded ranges.`;
+        return;
+      }
+      // Clamp the end of the window to today (the API's maximum).
+      if (liveToDate > today) liveToDate = today;
       const fetched = await source.fetch({
         symbols,
         from: liveFromDate ? new Date(liveFromDate) : undefined,
         to: liveToDate ? new Date(`${liveToDate}T23:59:59Z`) : undefined,
+        onProgress: ({ completed, total }) => {
+          liveFetchProgress = completed;
+          liveFetchTotal = total;
+        },
       });
       rawTransactions = fetched;
       liveFetching = false;
@@ -337,7 +353,7 @@
                   {/if}
                   <div>
                     <div class="mb-1 flex items-center justify-between">
-                      <span class="text-xs font-medium text-text-heading">Date range (optional)</span>
+                      <span class="text-xs font-medium text-text-heading">Date range{source.requiresDateRange ? '' : ' (optional)'}</span>
                       {#if liveFromDate || liveToDate}
                         <button
                           type="button"
@@ -351,12 +367,12 @@
                     <div class="grid grid-cols-2 gap-3">
                       <div>
                         <label for="live-from-{source.exchangeName}" class="mb-1 block text-xs text-text">From</label>
-                        <input id="live-from-{source.exchangeName}" type="date" bind:value={liveFromDate}
+                        <input id="live-from-{source.exchangeName}" type="date" max={today} bind:value={liveFromDate}
                           class="w-full rounded-lg border border-border bg-bg-card px-3 py-2 text-sm text-text-heading focus:border-accent focus:outline-none" />
                       </div>
                       <div>
                         <label for="live-to-{source.exchangeName}" class="mb-1 block text-xs text-text">To</label>
-                        <input id="live-to-{source.exchangeName}" type="date" bind:value={liveToDate}
+                        <input id="live-to-{source.exchangeName}" type="date" max={today} bind:value={liveToDate}
                           class="w-full rounded-lg border border-border bg-bg-card px-3 py-2 text-sm text-text-heading focus:border-accent focus:outline-none" />
                       </div>
                     </div>
@@ -376,6 +392,20 @@
                       Remove credentials
                     </button>
                   </div>
+                  {#if liveFetching && liveFetchTotal > 0}
+                    <div class="rounded-lg border border-border bg-bg-card p-4">
+                      <div class="mb-2 flex items-center justify-between text-sm">
+                        <span class="text-text-heading">Fetching transactions…</span>
+                        <span class="text-text">{liveFetchProgress} / {liveFetchTotal} periods</span>
+                      </div>
+                      <div class="h-2 overflow-hidden rounded-full bg-border">
+                        <div
+                          class="h-full rounded-full bg-accent transition-[width] duration-100 ease-linear"
+                          style="width: {liveFetchTotal > 0 ? (liveFetchProgress / liveFetchTotal) * 100 : 0}%"
+                        ></div>
+                      </div>
+                    </div>
+                  {/if}
                 {/if}
 
                 {#if liveError}
