@@ -7,6 +7,11 @@ vi.mock('@tauri-apps/api/core', () => ({
   invoke: (...args: unknown[]) => invokeMock(...args),
 }));
 
+vi.mock('@tauri-apps/api/event', () => ({
+  // The source subscribes to rate-limit events; return a no-op unlisten.
+  listen: () => Promise.resolve(() => {}),
+}));
+
 vi.mock('$lib/runtime', () => ({
   isTauri: () => true,
 }));

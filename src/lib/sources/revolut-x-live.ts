@@ -1,5 +1,6 @@
 import BigNumber from 'bignumber.js';
 import { invoke } from '@tauri-apps/api/core';
+import { listen } from '@tauri-apps/api/event';
 import type {
   ILiveSource,
   IImportPreprocessor,
@@ -135,6 +136,9 @@ const CHUNK_MS = 29 * 24 * 60 * 60 * 1000;
 /** Delay between sequential requests, to stay clear of rate limits. */
 const REQUEST_DELAY_MS = 75;
 
+/** Backend event fired (with `{ waitMs }`) when a request is rate limited and backing off. */
+const RATE_LIMITED_EVENT = 'revolut-x://rate-limited';
+
 const delay = (ms: number): Promise<void> => new Promise((resolve) => setTimeout(resolve, ms));
 
 /**
@@ -203,6 +207,24 @@ export class RevolutXLiveSource implements ILiveSource {
     const endMs = (params.to ?? new Date()).getTime();
     const startMs = (params.from ?? new Date(endMs - CHUNK_MS)).getTime();
 
+    // Surface backend rate-limit backoffs to the caller so the UI can show a
+    // countdown. Unsubscribed in `finally` once the fetch settles.
+    const unlisten = await listen<{ waitMs: number }>(RATE_LIMITED_EVENT, (event) => {
+      params.onRateLimit?.({ waitMs: event.payload.waitMs });
+    });
+
+    try {
+      return await this.fetchWindows(params, startMs, endMs);
+    } finally {
+      unlisten();
+    }
+  }
+
+  private async fetchWindows(
+    params: LiveSourceFetchParams,
+    startMs: number,
+    endMs: number,
+  ): Promise<Transaction[]> {
     const symbols = await this.heldPairSymbols();
     const chunks = dateChunks(startMs, endMs);
 

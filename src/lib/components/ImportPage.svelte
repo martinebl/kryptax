@@ -7,6 +7,7 @@
   import { BinanceLiveSource, RevolutXLiveSource } from '$lib/sources';
   import PreprocessorReview from '$lib/components/PreprocessorReview.svelte';
   import CsvPriceUploader from '$lib/components/CsvPriceUploader.svelte';
+  import DateField from '$lib/components/DateField.svelte';
   import { getCryptoConverter } from '$lib/context';
   import { enrichFiatValues } from '$lib/engine/enrich-fiat-values';
   import type { PricesByAsset } from '$lib/converters/csv-prices';
@@ -35,6 +36,7 @@
   let dragOver = $state(false);
   let error = $state('');
   let parsedCount = $state(0);
+  let importSourceName = $state('');
 
   let rawTransactions = $state<Transaction[]>([]);
   let reviewing = $state(false);
@@ -58,6 +60,25 @@
   let liveDiscovering = $state(false);
   let liveError = $state('');
   let liveInfo = $state('');
+  let liveRateLimitSeconds = $state(0);
+  let rateLimitTimer: ReturnType<typeof setInterval> | undefined;
+
+  const stopRateLimitCountdown = () => {
+    if (rateLimitTimer) clearInterval(rateLimitTimer);
+    rateLimitTimer = undefined;
+    liveRateLimitSeconds = 0;
+  };
+
+  // The backend hit a rate limit and is waiting `waitMs` before retrying; count
+  // down so the wait looks intentional rather than frozen.
+  const startRateLimitCountdown = (waitMs: number) => {
+    stopRateLimitCountdown();
+    liveRateLimitSeconds = Math.max(1, Math.ceil(waitMs / 1000));
+    rateLimitTimer = setInterval(() => {
+      liveRateLimitSeconds -= 1;
+      if (liveRateLimitSeconds <= 0) stopRateLimitCountdown();
+    }, 1000);
+  };
 
   $effect(() => {
     liveSources.forEach(async (s) => {
@@ -114,6 +135,7 @@
     try {
       const text = await files[0].text();
       rawTransactions = selectedImporter.parse(text);
+      importSourceName = selectedImporter.exchangeName;
       error = '';
 
       if (hasEligibleTransactions()) {
@@ -169,6 +191,7 @@
   };
 
   const handleClearCredentials = async (source: ILiveSource) => {
+    if (!confirm(`Forget the saved ${source.exchangeName} API key? You'll need to re-enter it to import again.`)) return;
     try {
       await source.clearCredentials();
       liveCredsSaved = { ...liveCredsSaved, [source.exchangeName]: false };
@@ -179,6 +202,7 @@
 
   const handleLiveFetch = async (source: ILiveSource) => {
     liveFetching = true;
+    importSourceName = source.exchangeName;
     liveError = '';
     liveInfo = '';
     liveFetchProgress = 0;
@@ -209,8 +233,10 @@
           liveFetchProgress = completed;
           liveFetchTotal = total;
         },
+        onRateLimit: ({ waitMs }) => startRateLimitCountdown(waitMs),
       });
       rawTransactions = fetched;
+      stopRateLimitCountdown();
       liveFetching = false;
       if (fetched.length === 0) {
         liveInfo = (source.requiresSymbols ?? true)
@@ -221,6 +247,7 @@
       enabledPreprocessors = new Set();
       await handleConfirm(new Map());
     } catch (e) {
+      stopRateLimitCountdown();
       liveFetching = false;
       liveError = e instanceof Error ? e.message : String(e);
     }
@@ -286,13 +313,23 @@
                   <p class="text-xs text-text">No credentials saved yet.</p>
                 {/if}
               </div>
-              <button
-                class="rounded-lg border border-border px-3 py-1.5 text-xs font-medium text-text-heading transition-colors hover:bg-bg-card disabled:cursor-not-allowed disabled:opacity-50"
-                disabled={!available}
-                onclick={() => openLiveSource(source.exchangeName)}
-              >
-                {open ? 'Close' : saved ? 'Manage' : 'Connect'}
-              </button>
+              <div class="flex gap-2">
+                {#if available && saved}
+                  <button
+                    class="rounded-lg border border-border px-3 py-1.5 text-xs font-medium text-text-heading transition-colors hover:border-red-300 hover:text-red-600"
+                    onclick={() => handleClearCredentials(source)}
+                  >
+                    Forget API key
+                  </button>
+                {/if}
+                <button
+                  class="rounded-lg border border-border px-3 py-1.5 text-xs font-medium text-text-heading transition-colors hover:bg-bg-card disabled:cursor-not-allowed disabled:opacity-50"
+                  disabled={!available}
+                  onclick={() => openLiveSource(source.exchangeName)}
+                >
+                  {open ? 'Close' : saved ? 'Manage' : 'Connect'}
+                </button>
+              </div>
             </div>
 
             {#if available && open}
@@ -367,31 +404,28 @@
                     <div class="grid grid-cols-2 gap-3">
                       <div>
                         <label for="live-from-{source.exchangeName}" class="mb-1 block text-xs text-text">From</label>
-                        <input id="live-from-{source.exchangeName}" type="date" max={today} bind:value={liveFromDate}
-                          class="w-full rounded-lg border border-border bg-bg-card px-3 py-2 text-sm text-text-heading focus:border-accent focus:outline-none" />
+                        <DateField id="live-from-{source.exchangeName}" max={today} bind:value={liveFromDate} />
                       </div>
                       <div>
                         <label for="live-to-{source.exchangeName}" class="mb-1 block text-xs text-text">To</label>
-                        <input id="live-to-{source.exchangeName}" type="date" max={today} bind:value={liveToDate}
-                          class="w-full rounded-lg border border-border bg-bg-card px-3 py-2 text-sm text-text-heading focus:border-accent focus:outline-none" />
+                        <DateField id="live-to-{source.exchangeName}" max={today} bind:value={liveToDate} />
                       </div>
                     </div>
                   </div>
-                  <div class="flex gap-2">
-                    <button
-                      class="rounded-lg bg-accent px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-accent/90 disabled:opacity-50"
-                      disabled={liveFetching}
-                      onclick={() => handleLiveFetch(source)}
-                    >
-                      {liveFetching ? 'Fetching…' : 'Fetch transactions'}
-                    </button>
-                    <button
-                      class="rounded-lg border border-border px-4 py-2 text-sm font-medium text-text-heading transition-colors hover:bg-bg-card"
-                      onclick={() => handleClearCredentials(source)}
-                    >
-                      Remove credentials
-                    </button>
-                  </div>
+                  <button
+                    class="rounded-lg bg-accent px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-accent/90 disabled:opacity-50"
+                    disabled={liveFetching}
+                    onclick={() => handleLiveFetch(source)}
+                  >
+                    {liveFetching ? 'Fetching…' : 'Fetch transactions'}
+                  </button>
+                  {#if liveRateLimitSeconds > 0}
+                    <div class="rounded-lg border border-amber-300 bg-amber-50 p-3">
+                      <p class="text-xs text-amber-800">
+                        Hit {source.exchangeName}'s rate limit — waiting {liveRateLimitSeconds}s before retrying…
+                      </p>
+                    </div>
+                  {/if}
                   {#if liveFetching && liveFetchTotal > 0}
                     <div class="rounded-lg border border-border bg-bg-card p-4">
                       <div class="mb-2 flex items-center justify-between text-sm">
@@ -578,7 +612,7 @@
       {#if parsedCount > 0 && !error && !reviewing}
         <div class="mt-4 rounded-lg border border-green-300 bg-green-50 p-4">
           <p class="text-sm text-green-700">
-            Parsed {parsedCount} transactions from {selectedImporter.exchangeName}. View your results on the Results page.
+            Imported {parsedCount} transactions from {importSourceName}. View your results on the Results page.
           </p>
         </div>
       {/if}

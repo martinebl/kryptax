@@ -14,6 +14,12 @@ export interface LiveSourceFetchParams {
    * finished requests out of `total`.
    */
   onProgress?: (progress: { completed: number; total: number }) => void;
+  /**
+   * Called when the source hits an upstream rate limit and is waiting before it
+   * retries, so the UI can show a countdown instead of appearing to hang.
+   * `waitMs` is how long the source will wait before the next attempt.
+   */
+  onRateLimit?: (info: { waitMs: number }) => void;
 }
 
 /**
