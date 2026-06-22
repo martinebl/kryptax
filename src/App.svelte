@@ -73,7 +73,7 @@
     window.scrollTo(0, 0);
   };
 
-  const handleImport = async (imported: Transaction[]) => {
+  const handleImport = async (imported: Transaction[]): Promise<{ newCount: number; dupCount: number }> => {
     const allTickers = [
       ...imported.map((t) => t.toAsset),
       ...imported.map((t) => t.fromAsset),
@@ -85,13 +85,16 @@
     pendingTransactions = imported;
     ambiguousCoins = ambiguous;
 
-    transactions = await txRepo.merge(imported);
+    const result = await txRepo.merge(imported);
+    transactions = result.transactions;
     pendingTransactions = [];
+    return { newCount: result.newCount, dupCount: result.dupCount };
   };
 
   const handleDisambiguate = async (resolutions: Record<string, string>) => {
     setUserResolutions(resolutions);
-    transactions = await txRepo.merge(pendingTransactions);
+    const result = await txRepo.merge(pendingTransactions);
+    transactions = result.transactions;
     pendingTransactions = [];
     ambiguousCoins = {};
     navigate('results');
@@ -161,6 +164,7 @@
     {:else if currentPage === 'import' && countryConfig}
       <ImportPage
         onImport={handleImport}
+        onNavigate={navigate}
         {pricesByAsset}
         {countryConfig}
         storedTransactionCount={transactions.length}

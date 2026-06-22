@@ -14,14 +14,15 @@
   import { isTauri } from '$lib/runtime';
 
   interface Props {
-    onImport: (transactions: Transaction[]) => void;
+    onImport: (transactions: Transaction[]) => Promise<{ newCount: number; dupCount: number }>;
+    onNavigate: (page: string) => void;
     pricesByAsset: PricesByAsset;
     countryConfig: CountryConfig;
     storedTransactionCount: number;
     onClearHistory: () => void;
   }
 
-  const { onImport, pricesByAsset, countryConfig, storedTransactionCount, onClearHistory }: Props = $props();
+  const { onImport, onNavigate, pricesByAsset, countryConfig, storedTransactionCount, onClearHistory }: Props = $props();
 
   const importers = [
     new LedgerImporter(),
@@ -41,7 +42,7 @@
 
   const converter = getCryptoConverter();
 
-  const handleEnrich = async (transactions: Transaction[], sourceName: string) => {
+  const handleEnrich = async (transactions: Transaction[], sourceName: string): Promise<{ newCount: number; dupCount: number }> => {
     importSourceName = sourceName;
     enriching = true;
     enrichProgress = 0;
@@ -58,7 +59,7 @@
     enriching = false;
     enrichFailed = result.failed;
     parsedCount = result.transactions.length;
-    onImport(result.transactions);
+    return onImport(result.transactions);
   };
 </script>
 
@@ -117,7 +118,7 @@
           {#if activeTab === 'csv'}
             <CsvImporter {importers} onConfirm={handleEnrich} />
           {:else}
-            <LiveImporter {liveSources} onConfirm={handleEnrich} />
+            <LiveImporter {liveSources} onConfirm={handleEnrich} {onNavigate} />
           {/if}
         </div>
 
