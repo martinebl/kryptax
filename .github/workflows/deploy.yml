@@ -29,6 +29,11 @@ jobs:
   rust-test:
     runs-on: ubuntu-latest
     timeout-minutes: 20
+    env:
+      # Harden cargo against transient crates.io download flakes
+      # (HTTP/2 multiplexing can trigger "connection reset by peer").
+      CARGO_NET_RETRY: 10
+      CARGO_HTTP_MULTIPLEXING: false
     defaults:
       run:
         working-directory: src-tauri
