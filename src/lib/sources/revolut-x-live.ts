@@ -170,9 +170,12 @@ export class RevolutXLiveSource implements ILiveSource {
         'Trades made in the main Revolut app (not the X exchange) — these aren\'t exposed by the API; export them as a CSV.',
       included: false,
     },
+    {
+      label:
+        "Trading fees — Revolut's API doesn't report them, so cost basis may be slightly understated. Add them via CSV import for exact figures.",
+      included: false,
+    },
   ];
-  readonly feesCaveat =
-    "Revolut's API does not report trading fees. Your cost basis may be slightly understated — add fees via a CSV import if you need exact figures.";
   readonly keyLabel = 'API key';
   readonly secretLabel = 'Ed25519 private key (PEM)';
 

@@ -59,9 +59,6 @@ export interface ILiveSource {
   /** Structured list of what the live connector does / does not fetch, for the UI card. */
   readonly whatFetches?: Array<{ label: string; included: boolean }>;
 
-  /** Warning message shown when the exchange API omits fee data. */
-  readonly feesCaveat?: string;
-
   /** Label for the API key credential field. */
   readonly keyLabel?: string;
 

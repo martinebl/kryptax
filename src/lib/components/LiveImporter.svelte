@@ -364,14 +364,6 @@
               </div>
             {/if}
 
-            <!-- Fees caveat -->
-            {#if source.feesCaveat}
-              <div class="mb-4 flex gap-2.5 rounded-xl border border-amber-200 bg-amber-50 px-3.5 py-3">
-                <span class="mt-px shrink-0 text-amber-500">⚠</span>
-                <p class="text-sm leading-relaxed text-amber-800">{source.feesCaveat}</p>
-              </div>
-            {/if}
-
             <!-- Binance: symbols input -->
             {#if source.requiresSymbols ?? true}
               <div class="mb-4">
@@ -452,17 +444,19 @@
               {#if st.phase === 'idle'}
                 {@const datesOk = !source.requiresDateRange || (!!st.fromDate && !!st.toDate)}
                 {@const symbolsOk = !(source.requiresSymbols ?? true) || st.symbols.trim().length > 0}
-                <button
-                  class="rounded-lg px-5 py-2.5 text-sm font-semibold text-white transition-colors
-                    {datesOk && symbolsOk ? 'bg-accent hover:bg-accent/90 cursor-pointer' : 'bg-border cursor-not-allowed'}"
-                  disabled={!datesOk || !symbolsOk}
-                  onclick={() => handleFetch(source)}
-                >
-                  Fetch transactions
-                </button>
-                <p class="mt-2.5 text-xs leading-relaxed text-text">
-                  New transactions merge with your stored history — duplicates are skipped automatically.
-                </p>
+                <div class="flex items-center gap-3.5">
+                  <button
+                    class="shrink-0 rounded-lg px-5 py-2.5 text-sm font-semibold text-white transition-colors
+                      {datesOk && symbolsOk ? 'bg-accent hover:bg-accent/90 cursor-pointer' : 'bg-border cursor-not-allowed'}"
+                    disabled={!datesOk || !symbolsOk}
+                    onclick={() => handleFetch(source)}
+                  >
+                    Fetch transactions
+                  </button>
+                  <p class="text-xs leading-relaxed text-text">
+                    New transactions merge with your stored history — duplicates are skipped.
+                  </p>
+                </div>
 
               {:else if st.phase === 'fetching'}
                 <div class="flex items-center justify-between text-sm">
