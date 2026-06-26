@@ -1,8 +1,8 @@
 {
   "$schema": "../node_modules/@tauri-apps/cli/config.schema.json",
-  "productName": "Cryptax",
+  "productName": "Kryptax",
   "version": "0.1.0",
-  "identifier": "com.cryptax.app",
+  "identifier": "com.kryptax.app",
   "build": {
     "frontendDist": "../dist",
     "devUrl": "http://localhost:5173",
@@ -12,7 +12,7 @@
   "app": {
     "windows": [
       {
-        "title": "Cryptax",
+        "title": "Kryptax",
         "width": 1200,
         "height": 800,
         "resizable": true,
