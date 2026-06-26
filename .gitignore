@@ -34,3 +34,6 @@ src-tauri/gen
 *.njsproj
 *.sln
 *.sw?
+
+# Test
+test-results/*
