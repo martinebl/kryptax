@@ -273,7 +273,7 @@
     <span class="mt-px shrink-0 text-text">⌗</span>
     <span>
       Pull transactions straight from the exchange API instead of uploading a CSV. API keys are encrypted in your operating
-      system's <strong class="font-semibold text-text-heading">keychain</strong> — never written to disk or transmitted.
+      system's <strong class="font-semibold text-text-heading">keychain</strong> — never written directly to disk or transmitted.
     </span>
   </p>
 
