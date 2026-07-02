@@ -117,7 +117,7 @@
             {storedTransactionCount} transaction{storedTransactionCount === 1 ? '' : 's'} stored in your browser
           </p>
           <button
-            class="cursor-pointer rounded-lg border border-border bg-transparent px-3 py-1.5 text-sm text-text transition-colors hover:border-red-300 hover:text-red-600"
+            class="cursor-pointer rounded-lg border border-border bg-transparent px-3 py-1.5 text-sm text-text transition-colors hover:border-danger-border hover:text-danger"
             onclick={onClearHistory}
           >
             Clear history
@@ -170,7 +170,7 @@
               href="https://github.com/martinebl/kryptax/releases"
               target="_blank"
               rel="noopener noreferrer"
-              class="mt-5 inline-block rounded-lg bg-accent px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-accent/90"
+              class="mt-5 inline-block rounded-lg bg-accent px-5 py-2.5 text-sm font-semibold text-on-accent transition-colors hover:bg-accent/90"
             >
               Get the desktop app →
             </a>
@@ -198,7 +198,7 @@
     <!-- ===== RIGHT: PRICE DATA ===== -->
     <div
       bind:this={pricePanel}
-      class="rounded-2xl border bg-white p-6 transition-all duration-300 lg:sticky lg:top-8
+      class="rounded-2xl border bg-surface p-6 transition-all duration-300 lg:sticky lg:top-8
         {highlightPricePanel ? 'border-accent ring-4 ring-accent/20' : 'border-border'}"
     >
       <h2 class="mb-2 font-heading text-xl font-semibold text-text-heading">Price data</h2>
